@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Analysis Pro - Advanced Trading Platform</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/plotly.js@2.26.0/dist/plotly.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <span>Forex Analysis Pro</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="#analysis" class="nav-item" data-tab="analysis">
+                    <i class="fas fa-chart-bar"></i>
+                    Analysis
+                </a>
+                <a href="#signals" class="nav-item" data-tab="signals">
+                    <i class="fas fa-bell"></i>
+                    Signals
+                </a>
+            </nav>
+            
+            <div class="header-controls">
+                <button class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="connection-status" id="connection-status">
+                    <i class="fas fa-circle"></i>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <section id="dashboard" class="tab-content active">
+            <!-- Market Overview -->
+            <div class="section-header">
+                <h2><i class="fas fa-globe"></i> Market Overview</h2>
+                <div class="last-updated">
+                    Last updated: <span id="last-updated-time">--</span>
+                </div>
+            </div>
+            
+            <!-- Currency Pairs Grid -->
+            <div class="currency-grid" id="currency-grid">
+                <!-- Currency cards will be populated by JavaScript -->
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="quick-stats">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-signal"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="total-signals">0</div>
+                        <div class="stat-label">Active Signals</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="bullish-signals">0</div>
+                        <div class="stat-label">Bullish Signals</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chart-line-down"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="bearish-signals">0</div>
+                        <div class="stat-label">Bearish Signals</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="avg-confidence">0%</div>
+                        <div class="stat-label">Avg Confidence</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analysis Tab -->
+        <section id="analysis" class="tab-content">
+            <!-- Pair Selection -->
+            <div class="analysis-controls">
+                <div class="pair-selector">
+                    <label for="analysis-pair">Currency Pair:</label>
+                    <select id="analysis-pair">
+                        <option value="EURUSD">EUR/USD</option>
+                        <option value="GBPUSD">GBP/USD</option>
+                        <option value="USDJPY">USD/JPY</option>
+                        <option value="USDCHF">USD/CHF</option>
+                        <option value="AUDUSD">AUD/USD</option>
+                        <option value="USDCAD">USD/CAD</option>
+                        <option value="NZDUSD">NZD/USD</option>
+                        <option value="EURGBP">EUR/GBP</option>
+                    </select>
+                </div>
+                
+                <div class="timeframe-selector">
+                    <label for="analysis-timeframe">Timeframe:</label>
+                    <select id="analysis-timeframe">
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h" selected>1 Hour</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                    </select>
+                </div>
+                
+                <button class="analyze-btn" id="analyze-btn">
+                    <i class="fas fa-search"></i>
+                    Analyze
+                </button>
+            </div>
+            
+            <!-- Chart Container -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 id="chart-title">EURUSD - 1 Hour Chart</h3>
+                    <div class="chart-controls">
+                        <button class="chart-btn" data-indicator="sma">SMA</button>
+                        <button class="chart-btn" data-indicator="ema">EMA</button>
+                        <button class="chart-btn" data-indicator="bollinger">Bollinger Bands</button>
+                        <button class="chart-btn" data-indicator="rsi">RSI</button>
+                        <button class="chart-btn" data-indicator="macd">MACD</button>
+                        <button class="chart-btn" data-indicator="volume">Volume</button>
+                    </div>
+                </div>
+                <div id="price-chart" class="chart"></div>
+            </div>
+            
+            <!-- Analysis Results -->
+            <div class="analysis-results">
+                <div class="analysis-section">
+                    <h3><i class="fas fa-cogs"></i> Technical Analysis</h3>
+                    <div id="technical-results" class="results-content">
+                        <div class="loading">Click "Analyze" to view technical analysis</div>
+                    </div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3><i class="fas fa-newspaper"></i> Fundamental Analysis</h3>
+                    <div id="fundamental-results" class="results-content">
+                        <div class="loading">Click "Analyze" to view fundamental analysis</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Signals Tab -->
+        <section id="signals" class="tab-content">
+            <div class="section-header">
+                <h2><i class="fas fa-bell"></i> Trading Signals</h2>
+                <div class="signal-controls">
+                    <select id="signal-pair-filter">
+                        <option value="">All Pairs</option>
+                        <option value="EURUSD">EUR/USD</option>
+                        <option value="GBPUSD">GBP/USD</option>
+                        <option value="USDJPY">USD/JPY</option>
+                        <option value="USDCHF">USD/CHF</option>
+                        <option value="AUDUSD">AUD/USD</option>
+                        <option value="USDCAD">USD/CAD</option>
+                        <option value="NZDUSD">NZD/USD</option>
+                        <option value="EURGBP">EUR/GBP</option>
+                    </select>
+                    <button class="refresh-btn" id="refresh-signals">
+                        <i class="fas fa-refresh"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Signal Cards -->
+            <div class="signals-container" id="signals-container">
+                <!-- Signal cards will be populated by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading...</span>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notification-container" id="notification-container">
+        <!-- Notifications will be added here -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/signals.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

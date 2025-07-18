@@ -1,0 +1,44 @@
+{
+  "name": "forex-analysis-pro",
+  "version": "1.0.0",
+  "description": "Multi-Currency Trading Analysis Platform",
+  "main": "app.py",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "python app.py",
+    "dev": "python app.py",
+    "install-deps": "pip install -r requirements.txt",
+    "build": "echo 'No build step required for Flask application'",
+    "test": "echo 'Tests not yet implemented'",
+    "lint": "echo 'Linting not yet configured'"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.7.2",
+    "plotly.js": "^2.26.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/forex-analysis-pro"
+  },
+  "keywords": [
+    "forex",
+    "trading",
+    "analysis",
+    "signals",
+    "technical-analysis",
+    "fundamental-analysis",
+    "flask",
+    "javascript",
+    "websockets",
+    "plotly"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/forex-analysis-pro/issues"
+  },
+  "homepage": "https://github.com/yourusername/forex-analysis-pro#readme"
+}
