@@ -1,12 +1,12 @@
 services:
   - type: web
     name: forex-analysis-pro
-    env: python
+    runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     plan: free
     region: oregon
-    env_vars:
+    envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: FLASK_ENV
