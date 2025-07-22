@@ -1,0 +1,11 @@
+# Alternative minimal requirements for deployment
+Flask==3.0.0
+numpy==1.24.4
+requests==2.31.0
+python-dotenv==1.0.0
+yfinance==0.2.28
+flask-cors==4.0.0
+flask-socketio==5.3.6
+gunicorn==21.2.0
+# Remove pandas temporarily to avoid build issues
+# pandas will be installed via conda if available or skipped
