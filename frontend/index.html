@@ -47,6 +47,12 @@
 
     <!-- Debug Panel (temporary for testing) -->
     <div id="debug-panel" style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; z-index: 10000; font-size: 12px;">
+        <div style="margin-bottom: 5px;">
+            <strong>Debug Panel</strong>
+        </div>
+        <div id="config-status" style="margin-bottom: 5px; font-size: 11px;">
+            CONFIG: <span style="color: orange;">Checking...</span>
+        </div>
         <button onclick="testApiConnection()" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Test API</button>
         <div id="debug-status" style="margin-top: 5px;">Ready</div>
     </div>
@@ -277,6 +283,20 @@
     <script src="static/js/app.js"></script>
 
     <script>
+        // Check CONFIG status when page loads
+        function checkConfigStatus() {
+            const configStatus = document.getElementById('config-status');
+            if (configStatus) {
+                if (typeof CONFIG !== 'undefined') {
+                    configStatus.innerHTML = 'CONFIG: <span style="color: #10b981;">✅ Loaded</span>';
+                    console.log('CONFIG loaded successfully:', CONFIG);
+                } else {
+                    configStatus.innerHTML = 'CONFIG: <span style="color: #ef4444;">❌ Missing</span>';
+                    console.error('CONFIG is not defined');
+                }
+            }
+        }
+
         // Hide loading screen when everything is loaded
         window.addEventListener('load', () => {
             const loadingScreen = document.getElementById('loading-screen');
@@ -286,6 +306,9 @@
                     loadingScreen.style.display = 'none';
                 }, 500);
             }
+            
+            // Check CONFIG status
+            setTimeout(checkConfigStatus, 100);
         });
 
         // Handle offline/online status
@@ -303,13 +326,24 @@
             debugStatus.innerHTML = 'Testing...';
             
             try {
-                console.log('Testing API connection to:', CONFIG.API_BASE_URL);
+                // Check if CONFIG is available
+                if (typeof CONFIG === 'undefined') {
+                    throw new Error('CONFIG is not defined - scripts may not be loaded in correct order');
+                }
                 
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/forex/pairs`, {
+                const apiUrl = CONFIG.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
+                console.log('Testing API connection to:', apiUrl);
+                console.log('Full CONFIG object:', CONFIG);
+                
+                const fullUrl = `${apiUrl}/api/forex/pairs`;
+                console.log('Full request URL:', fullUrl);
+                
+                const response = await fetch(fullUrl, {
                     method: 'GET',
                     mode: 'cors',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     }
                 });
                 
