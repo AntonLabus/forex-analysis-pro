@@ -276,11 +276,20 @@
 
     <!-- Scripts -->
     <!-- Configuration must be loaded first -->
-    <script src="static/js/config.js"></script>
-    <script src="static/js/utils.js"></script>
-    <script src="static/js/chart.js"></script>
-    <script src="static/js/signals.js"></script>
-    <script src="static/js/app.js"></script>
+    <script>
+        console.log('About to load config.js...');
+        // Debug script loading order
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT') {
+                console.error('Script failed to load:', e.target.src);
+            }
+        });
+    </script>
+    <script src="static/js/config.js" onload="console.log('config.js loaded successfully')" onerror="console.error('Failed to load config.js')"></script>
+    <script src="static/js/utils.js" onload="console.log('utils.js loaded')" onerror="console.error('Failed to load utils.js')"></script>
+    <script src="static/js/chart.js" onload="console.log('chart.js loaded')" onerror="console.error('Failed to load chart.js')"></script>
+    <script src="static/js/signals.js" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
+    <script src="static/js/app.js" onload="console.log('app.js loaded')" onerror="console.error('Failed to load app.js')"></script>
 
     <script>
         // Check CONFIG status when page loads
@@ -297,6 +306,36 @@
             }
         }
 
+        // Fallback CONFIG if external script fails
+        function ensureConfig() {
+            if (typeof CONFIG === 'undefined') {
+                console.warn('CONFIG not loaded from external script, using fallback');
+                window.CONFIG = {
+                    API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
+                    WEBSOCKET_URL: 'https://forex-analysis-pro.onrender.com',
+                    ENDPOINTS: {
+                        FOREX_PAIRS: '/api/forex/pairs',
+                        FOREX_DATA: '/api/forex/data',
+                        TECHNICAL_ANALYSIS: '/api/analysis/technical',
+                        FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
+                        SIGNALS: '/api/signals',
+                        HEALTH: '/api/health'
+                    },
+                    CURRENCY_PAIRS: [
+                        { symbol: 'EURUSD', name: 'Euro / US Dollar' },
+                        { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
+                        { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
+                        { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
+                        { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
+                        { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
+                        { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
+                        { symbol: 'EURGBP', name: 'Euro / British Pound' }
+                    ]
+                };
+                console.log('Fallback CONFIG created:', CONFIG);
+            }
+        }
+
         // Hide loading screen when everything is loaded
         window.addEventListener('load', () => {
             const loadingScreen = document.getElementById('loading-screen');
@@ -306,6 +345,9 @@
                     loadingScreen.style.display = 'none';
                 }, 500);
             }
+            
+            // Ensure CONFIG exists
+            ensureConfig();
             
             // Check CONFIG status
             setTimeout(checkConfigStatus, 100);
@@ -326,9 +368,12 @@
             debugStatus.innerHTML = 'Testing...';
             
             try {
+                // Ensure CONFIG exists
+                ensureConfig();
+                
                 // Check if CONFIG is available
                 if (typeof CONFIG === 'undefined') {
-                    throw new Error('CONFIG is not defined - scripts may not be loaded in correct order');
+                    throw new Error('CONFIG is still not defined even after fallback creation');
                 }
                 
                 const apiUrl = CONFIG.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
