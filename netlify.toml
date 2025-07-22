@@ -1,0 +1,57 @@
+[build]
+  # Set the base directory to frontend folder
+  base = "frontend/"
+  
+  # Publish the frontend folder directly (no build needed)
+  publish = "frontend/"
+  
+  # No build command needed for static HTML/CSS/JS
+  command = ""
+
+[build.environment]
+  # Set Node version (even though we're not using Node, Netlify requires this)
+  NODE_VERSION = "18"
+
+# Redirect all routes to index.html for SPA behavior
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variables for production
+[context.production.environment]
+  API_BASE_URL = "https://forex-analysis-pro.onrender.com"
+
+[context.deploy-preview.environment]
+  API_BASE_URL = "https://forex-analysis-pro.onrender.com"
+
+[context.branch-deploy.environment]
+  API_BASE_URL = "https://forex-analysis-pro.onrender.com"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# Cache static assets
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"

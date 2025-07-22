@@ -1,19 +1,38 @@
 /**
  * Configuration settings for Forex Analysis Pro
+ * Optimized for Netlify deployment with Render backend
  */
+
+/**
+ * Determine API base URL based on environment
+ * @returns {string} API base URL
+ */
+const getApiBaseUrl = () => {
+    // Runtime environment detection
+    const hostname = window.location.hostname;
+    
+    // Development environment
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:5000';
+    }
+    
+    // Production environment (Netlify deployment)
+    return 'https://forex-analysis-pro.onrender.com';
+};
 
 const CONFIG = {
     // API endpoints
-    API_BASE_URL: window.location.origin,
-    WEBSOCKET_URL: window.location.origin,
+    API_BASE_URL: getApiBaseUrl(),
+    WEBSOCKET_URL: getApiBaseUrl(),
     
     // API endpoints
     ENDPOINTS: {
         FOREX_PAIRS: '/api/forex/pairs',
         FOREX_DATA: '/api/forex/data',
-        TECHNICAL_ANALYSIS: '/api/analysis/technical',
-        FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
-        SIGNALS: '/api/signals'
+        TECHNICAL_ANALYSIS: '/api/technical-analysis',
+        FUNDAMENTAL_ANALYSIS: '/api/fundamental-analysis',
+        SIGNALS_ALL: '/api/signals/all',
+        SIGNALS_PAIR: '/api/signals'
     },
     
     // Currency pairs configuration
@@ -102,6 +121,26 @@ const CONFIG = {
     },
     
     // Error messages
+    ERRORS: {
+        NETWORK_ERROR: 'Network connection error. Please check your internet connection.',
+        API_ERROR: 'API request failed. Please try again later.',
+        DATA_ERROR: 'Unable to load data. Please refresh the page.',
+        WEBSOCKET_ERROR: 'Real-time connection lost. Operating in polling mode.'
+    }
+};
+
+// Environment-specific logging
+if (CONFIG.API_BASE_URL.includes('localhost')) {
+    console.log('🚀 Forex Analysis Pro - Development Mode');
+    console.log('📡 API Base URL:', CONFIG.API_BASE_URL);
+    console.log('🔌 WebSocket URL:', CONFIG.WEBSOCKET_URL);
+} else {
+    console.log('🚀 Forex Analysis Pro - Production Mode');
+    console.log('📡 Connected to:', CONFIG.API_BASE_URL);
+}
+
+// Make CONFIG globally available
+window.CONFIG = CONFIG;
     ERROR_MESSAGES: {
         NETWORK_ERROR: 'Network error. Please check your connection.',
         API_ERROR: 'Unable to fetch data. Please try again.',
