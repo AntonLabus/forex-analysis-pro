@@ -275,9 +275,45 @@
     </div>
 
     <!-- Scripts -->
-    <!-- Configuration must be loaded first -->
+    <!-- Inline CONFIG definition to ensure it's available immediately -->
     <script>
-        console.log('About to load config.js...');
+        console.log('Creating immediate CONFIG...');
+        
+        // Immediate CONFIG definition
+        window.CONFIG = {
+            API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
+            WEBSOCKET_URL: 'https://forex-analysis-pro.onrender.com',
+            ENDPOINTS: {
+                FOREX_PAIRS: '/api/forex/pairs',
+                FOREX_DATA: '/api/forex/data',
+                TECHNICAL_ANALYSIS: '/api/analysis/technical',
+                FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
+                SIGNALS: '/api/signals',
+                HEALTH: '/api/health'
+            },
+            CURRENCY_PAIRS: [
+                { symbol: 'EURUSD', name: 'Euro / US Dollar' },
+                { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
+                { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
+                { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
+                { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
+                { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
+                { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
+                { symbol: 'EURGBP', name: 'Euro / British Pound' }
+            ],
+            THEME: {
+                DEFAULT: 'dark',
+                COLORS: {
+                    PRIMARY: '#3b82f6',
+                    SUCCESS: '#10b981',
+                    ERROR: '#ef4444',
+                    WARNING: '#f59e0b'
+                }
+            }
+        };
+        
+        console.log('CONFIG created immediately:', window.CONFIG);
+        
         // Debug script loading order
         window.addEventListener('error', function(e) {
             if (e.target.tagName === 'SCRIPT') {
@@ -285,7 +321,9 @@
             }
         });
     </script>
-    <script src="static/js/config.js" onload="console.log('config.js loaded successfully')" onerror="console.error('Failed to load config.js')"></script>
+    
+    <!-- External config.js will override if it loads successfully -->
+    <script src="static/js/config.js" onload="console.log('External config.js loaded successfully')" onerror="console.warn('External config.js failed to load, using inline CONFIG')"></script>
     <script src="static/js/utils.js" onload="console.log('utils.js loaded')" onerror="console.error('Failed to load utils.js')"></script>
     <script src="static/js/chart.js" onload="console.log('chart.js loaded')" onerror="console.error('Failed to load chart.js')"></script>
     <script src="static/js/signals.js" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
@@ -308,32 +346,36 @@
 
         // Fallback CONFIG if external script fails
         function ensureConfig() {
-            if (typeof CONFIG === 'undefined') {
-                console.warn('CONFIG not loaded from external script, using fallback');
-                window.CONFIG = {
-                    API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
-                    WEBSOCKET_URL: 'https://forex-analysis-pro.onrender.com',
-                    ENDPOINTS: {
-                        FOREX_PAIRS: '/api/forex/pairs',
-                        FOREX_DATA: '/api/forex/data',
-                        TECHNICAL_ANALYSIS: '/api/analysis/technical',
-                        FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
-                        SIGNALS: '/api/signals',
-                        HEALTH: '/api/health'
-                    },
-                    CURRENCY_PAIRS: [
-                        { symbol: 'EURUSD', name: 'Euro / US Dollar' },
-                        { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
-                        { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
-                        { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
-                        { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
-                        { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
-                        { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
-                        { symbol: 'EURGBP', name: 'Euro / British Pound' }
-                    ]
-                };
-                console.log('Fallback CONFIG created:', CONFIG);
+            // CONFIG should already exist from inline definition
+            if (typeof CONFIG !== 'undefined') {
+                console.log('CONFIG already available, no fallback needed');
+                return;
             }
+            
+            // This should rarely be needed now
+            console.warn('Creating emergency fallback CONFIG');
+            window.CONFIG = {
+                API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
+                WEBSOCKET_URL: 'https://forex-analysis-pro.onrender.com',
+                ENDPOINTS: {
+                    FOREX_PAIRS: '/api/forex/pairs',
+                    FOREX_DATA: '/api/forex/data',
+                    TECHNICAL_ANALYSIS: '/api/analysis/technical',
+                    FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
+                    SIGNALS: '/api/signals',
+                    HEALTH: '/api/health'
+                },
+                CURRENCY_PAIRS: [
+                    { symbol: 'EURUSD', name: 'Euro / US Dollar' },
+                    { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
+                    { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
+                    { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
+                    { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
+                    { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
+                    { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
+                    { symbol: 'EURGBP', name: 'Euro / British Pound' }
+                ]
+            };
         }
 
         // Hide loading screen when everything is loaded
