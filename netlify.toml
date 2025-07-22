@@ -2,8 +2,8 @@
   # Set the base directory to frontend folder
   base = "frontend/"
   
-  # Publish the frontend folder directly (no build needed)
-  publish = "frontend/"
+  # Publish the current directory (frontend/) - use "." since base is already set
+  publish = "."
   
   # No build command needed for static HTML/CSS/JS
   command = ""
