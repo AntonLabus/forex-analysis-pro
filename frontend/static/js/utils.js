@@ -132,22 +132,32 @@ class Utils {
      */
     static async request(url, options = {}) {
         try {
+            console.log('Making request to:', url);
+            
             const response = await fetch(url, {
+                mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     ...options.headers
                 },
                 ...options
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('Response data:', data);
             return data;
         } catch (error) {
             console.error('Request failed:', error);
+            console.error('URL:', url);
+            console.error('Options:', options);
             throw error;
         }
     }

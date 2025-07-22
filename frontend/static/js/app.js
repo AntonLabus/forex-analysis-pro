@@ -131,20 +131,38 @@ class ForexAnalysisApp {
      */
     initWebSocket() {
         try {
-            this.socket = io(CONFIG.WEBSOCKET_URL);
+            // Skip WebSocket for now if Socket.io is not available
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io not available, skipping WebSocket connection');
+                this.updateConnectionStatus(false);
+                return;
+            }
+
+            console.log('Initializing WebSocket connection to:', CONFIG.WEBSOCKET_URL);
+            this.socket = io(CONFIG.WEBSOCKET_URL, {
+                timeout: 10000,
+                transports: ['websocket', 'polling']
+            });
 
             this.socket.on('connect', () => {
                 console.log('WebSocket connected');
                 this.updateConnectionStatus(true);
                 
                 // Subscribe to price updates for all pairs
-                CONFIG.CURRENCY_PAIRS.forEach(pair => {
-                    this.socket.emit('subscribe_pair', { pair: pair.symbol });
-                });
+                if (CONFIG.CURRENCY_PAIRS) {
+                    CONFIG.CURRENCY_PAIRS.forEach(pair => {
+                        this.socket.emit('subscribe_pair', { pair: pair.symbol });
+                    });
+                }
             });
 
             this.socket.on('disconnect', () => {
                 console.log('WebSocket disconnected');
+                this.updateConnectionStatus(false);
+            });
+
+            this.socket.on('connect_error', (error) => {
+                console.warn('WebSocket connection error:', error);
                 this.updateConnectionStatus(false);
             });
 
@@ -173,17 +191,22 @@ class ForexAnalysisApp {
         Utils.showLoading('Loading market data...');
 
         try {
+            console.log('Starting to load initial data...');
+            
             // Load currency pairs data
             await this.loadCurrencyPairs();
             
             // Load signals for all pairs
             if (window.signalManager) {
+                console.log('Loading signals...');
                 await window.signalManager.fetchAllSignals();
             }
             
+            console.log('Initial data loaded successfully');
+            
         } catch (error) {
             console.error('Failed to load initial data:', error);
-            Utils.showNotification('Failed to load some data', 'warning');
+            Utils.showNotification('Some data could not be loaded. The app will continue with limited functionality.', 'warning');
         } finally {
             Utils.hideLoading();
         }
@@ -194,20 +217,26 @@ class ForexAnalysisApp {
      */
     async loadCurrencyPairs() {
         try {
+            console.log('Fetching currency pairs from:', `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}`);
             const response = await Utils.request(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}`);
             
-            if (response.success) {
+            console.log('API Response:', response);
+            
+            if (response.success && response.data) {
+                console.log('Processing', response.data.length, 'currency pairs');
                 response.data.forEach(pair => {
                     this.currencyData.set(pair.symbol, pair);
                 });
                 
                 this.updateCurrencyGrid();
                 this.updateLastUpdatedTime();
+                console.log('Currency pairs loaded successfully');
             } else {
-                throw new Error(response.error || 'Failed to load currency pairs');
+                throw new Error(response.error || 'Failed to load currency pairs - invalid response structure');
             }
         } catch (error) {
             console.error('Error loading currency pairs:', error);
+            Utils.showNotification('Failed to load live market data. Please check your connection.', 'error');
             throw error;
         }
     }
@@ -749,9 +778,11 @@ class ForexAnalysisApp {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.forexApp = new ForexAnalysisApp();
+    window.app = new ForexAnalysisApp();
+    window.forexApp = window.app; // Keep both for compatibility
     window.chartManager = new ChartManager();
     window.signalManager = new SignalManager();
     
     console.log('Application initialized with chartManager:', !!window.chartManager);
+    console.log('Application initialized with app:', !!window.app);
 });

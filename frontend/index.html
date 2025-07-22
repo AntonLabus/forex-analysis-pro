@@ -45,6 +45,12 @@
         <div class="loading-text">Loading Forex Analysis Pro...</div>
     </div>
 
+    <!-- Debug Panel (temporary for testing) -->
+    <div id="debug-panel" style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; z-index: 10000; font-size: 12px;">
+        <button onclick="testApiConnection()" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Test API</button>
+        <div id="debug-status" style="margin-top: 5px;">Ready</div>
+    </div>
+
     <!-- Header -->
     <header class="header">
         <div class="header-content">
@@ -87,8 +93,13 @@
             <!-- Market Overview -->
             <div class="section-header">
                 <h2><i class="fas fa-globe"></i> Market Overview</h2>
-                <div class="last-updated">
-                    Last updated: <span id="last-updated-time">--</span>
+                <div class="header-controls" style="display: flex; align-items: center; gap: 15px;">
+                    <button onclick="forceRefreshData()" class="refresh-btn" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                    <div class="last-updated">
+                        Last updated: <span id="last-updated-time">--</span>
+                    </div>
                 </div>
             </div>
             
@@ -285,6 +296,65 @@
         window.addEventListener('offline', () => {
             console.log('Connection lost - operating offline');
         });
+
+        // Debug function to test API connection
+        async function testApiConnection() {
+            const debugStatus = document.getElementById('debug-status');
+            debugStatus.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Testing API connection to:', CONFIG.API_BASE_URL);
+                
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/forex/pairs`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                if (data.success && data.data) {
+                    debugStatus.innerHTML = `✅ Success: ${data.data.length} pairs loaded`;
+                } else {
+                    debugStatus.innerHTML = `❌ No data in response`;
+                }
+                
+            } catch (error) {
+                console.error('API test failed:', error);
+                debugStatus.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+
+        // Force refresh data function
+        async function forceRefreshData() {
+            console.log('Force refreshing all data...');
+            if (window.app) {
+                const loadingPlaceholder = document.querySelector('.loading-placeholder');
+                if (loadingPlaceholder) {
+                    loadingPlaceholder.style.display = 'flex';
+                }
+                
+                try {
+                    await window.app.loadCurrencyPairs();
+                    await window.app.loadSignals();
+                    console.log('Data refresh completed');
+                } catch (error) {
+                    console.error('Data refresh failed:', error);
+                }
+            } else {
+                console.error('App not initialized');
+            }
+        }
     </script>
 </body>
 </html>
