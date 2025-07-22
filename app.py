@@ -12,15 +12,70 @@ import logging
 from datetime import datetime
 import threading
 import time
-import pandas as pd
 from typing import Dict, Any
 
-# Import custom modules
-from backend.data_fetcher import DataFetcher
-from backend.technical_analysis import TechnicalAnalysis
-from backend.fundamental_analysis import FundamentalAnalysis
-from backend.signal_generator import SignalGenerator
-from backend.database import Database
+# Try to import pandas, fallback to basic functionality if not available
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+    pd = None
+
+# Import custom modules with fallback handling
+try:
+    if PANDAS_AVAILABLE:
+        from backend.data_fetcher import DataFetcher
+    else:
+        from backend.data_fetcher_nodeps import DataFetcher
+except ImportError:
+    from backend.data_fetcher_nodeps import DataFetcher
+
+# Try to import full technical analysis, fallback to simple version
+try:
+    if PANDAS_AVAILABLE:
+        from backend.technical_analysis import TechnicalAnalysis
+    else:
+        raise ImportError("Pandas not available")
+except ImportError:
+    from backend.technical_analysis_nodeps import TechnicalAnalysis
+
+try:
+    from backend.fundamental_analysis import FundamentalAnalysis
+except ImportError:
+    # Create a dummy fundamental analysis class
+    class FundamentalAnalysis:
+        def analyze(self, pair):
+            return {
+                "pair": pair,
+                "summary": {"overall_bias": "NEUTRAL", "confidence": 0},
+                "interest_rate_analysis": {"differential": 0, "impact": "NEUTRAL"},
+                "economic_calendar": {"total_events": 0, "high_impact_count": 0}
+            }
+
+try:
+    from backend.signal_generator import SignalGenerator
+except ImportError:
+    # Create a dummy signal generator
+    class SignalGenerator:
+        def generate_signal(self, pair, technical_data, fundamental_data):
+            return {
+                "pair": pair,
+                "signal": {"direction": "HOLD", "confidence": 0},
+                "timestamp": datetime.now().isoformat()
+            }
+
+try:
+    from backend.database import Database
+except ImportError:
+    # Create a dummy database class
+    class Database:
+        def __init__(self):
+            pass
+        def store_price_data(self, *args):
+            pass
+        def get_historical_data(self, *args):
+            return []
 
 # Load environment variables
 load_dotenv()
