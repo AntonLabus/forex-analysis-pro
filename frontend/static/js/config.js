@@ -141,13 +141,6 @@ if (CONFIG.API_BASE_URL.includes('localhost')) {
 
 // Make CONFIG globally available
 window.CONFIG = CONFIG;
-    ERROR_MESSAGES: {
-        NETWORK_ERROR: 'Network error. Please check your connection.',
-        API_ERROR: 'Unable to fetch data. Please try again.',
-        INVALID_PAIR: 'Invalid currency pair selected.',
-        NO_DATA: 'No data available for the selected timeframe.'
-    }
-};
 
 // Freeze the configuration to prevent accidental modifications
 Object.freeze(CONFIG);
@@ -158,4 +151,3 @@ Object.freeze(CONFIG.SIGNALS);
 Object.freeze(CONFIG.UPDATE_INTERVALS);
 Object.freeze(CONFIG.NOTIFICATIONS);
 Object.freeze(CONFIG.STORAGE_KEYS);
-Object.freeze(CONFIG.ERROR_MESSAGES);
