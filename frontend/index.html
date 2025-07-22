@@ -494,7 +494,13 @@
                 
                 try {
                     await window.app.loadCurrencyPairs();
-                    await window.app.loadSignals();
+                    
+                    // Load signals using signalManager
+                    if (window.signalManager) {
+                        console.log('Refreshing signals via signalManager...');
+                        await window.signalManager.fetchAllSignals();
+                    }
+                    
                     console.log('Data refresh completed');
                 } catch (error) {
                     console.error('Data refresh failed:', error);
