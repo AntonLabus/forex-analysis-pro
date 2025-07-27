@@ -127,17 +127,36 @@ class HomePage {
 
     async loadFeaturedPairData() {
         try {
-            const apiUrl = window.CONFIG?.API_BASE_URL || 'http://localhost:5000';
+            console.log('Loading featured pair data with enhanced debugging...');
+            const apiUrl = window.CONFIG?.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
             
-            // Fetch current price data
+            // Fetch current price data with detailed logging
+            console.log('Fetching from API:', `${apiUrl}/api/forex/pairs`);
             const response = await fetch(`${apiUrl}/api/forex/pairs`);
+            console.log('API Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
+            console.log('Full API response:', data);
             
             if (data.success && data.data) {
+                console.log('Number of pairs received:', data.data.length);
                 const pairData = data.data.find(pair => pair.symbol === this.featuredPair);
+                console.log('EUR/USD pair data:', pairData);
+                
                 if (pairData) {
+                    console.log('Current price from API:', pairData.current_price);
                     this.updateFeaturedPairDisplay(pairData);
+                } else {
+                    console.error('EURUSD pair not found in API response');
+                    this.showFallbackData();
                 }
+            } else {
+                console.error('API response indicates failure:', data);
+                this.showFallbackData();
             }
 
             // Fetch signal data
@@ -145,6 +164,7 @@ class HomePage {
             
         } catch (error) {
             console.error('Error loading featured pair data:', error);
+            console.error('Error stack:', error.stack);
             this.showFallbackData();
         }
     }
@@ -267,8 +287,8 @@ class HomePage {
             <div class="css-chart-container">
                 <div class="chart-header">
                     <span class="chart-pair">EUR/USD</span>
-                    <span class="chart-price">1.0850</span>
-                    <span class="chart-change positive">+0.21%</span>
+                    <span class="chart-price">1.1744</span>
+                    <span class="chart-change negative">-0.08%</span>
                 </div>
                 <div class="css-chart">
                     <div class="chart-line">
@@ -285,7 +305,7 @@ class HomePage {
                             <polyline 
                                 points="0,55 12,52 25,58 37,45 50,48 62,42 75,40 87,35 100,38"
                                 fill="none" 
-                                stroke="rgba(96, 165, 250, 0.8)" 
+                                stroke="rgba(239, 68, 68, 0.8)" 
                                 stroke-width="2"
                                 vector-effect="non-scaling-stroke">
                             </polyline>
@@ -508,7 +528,7 @@ class HomePage {
         console.log('Generating sample chart data as fallback');
         const labels = [];
         const prices = [];
-        const basePrice = 1.0850;
+        const basePrice = 1.1744; // Updated to current market price
         const hours = 24;
         
         for (let i = 0; i < hours; i++) {
@@ -558,7 +578,7 @@ class HomePage {
         if (metrics.length >= 4) {
             // Use real signal data if available, otherwise calculate reasonable defaults
             const entry = signal.entry_price || signal.signal?.entry_price || 
-                         (signal.current_price ? parseFloat(signal.current_price) : 1.0850);
+                         (signal.current_price ? parseFloat(signal.current_price) : 1.1744); // Updated fallback
             const target = signal.target_price || signal.signal?.target_price || 
                           (direction === 'BUY' ? entry + 0.0075 : entry - 0.0075);
             const stop = signal.stop_loss || signal.signal?.stop_loss || 
@@ -615,18 +635,19 @@ class HomePage {
     }
 
     showFallbackData() {
-        // Show realistic fallback data
+        // Show realistic fallback data based on approximate current market prices
         const priceElement = document.getElementById('featured-price');
         if (priceElement) {
-            priceElement.textContent = '1.0850';
+            // Use a current realistic price (updated based on market conditions)
+            priceElement.textContent = '1.1744'; // Updated to match approximate current market price
         }
 
         const changeElement = document.getElementById('featured-change');
         if (changeElement) {
-            changeElement.className = 'price-change positive';
+            changeElement.className = 'price-change negative';
             changeElement.innerHTML = `
-                <i class="fas fa-arrow-up"></i>
-                <span>+0.0023 (+0.21%)</span>
+                <i class="fas fa-arrow-down"></i>
+                <span>-0.0010 (-0.08%)</span>
             `;
         }
     }
