@@ -25,6 +25,11 @@ class DataFetcher:
         self.cache = {}
         self.cache_expiry = {}
         
+        # Rate limiting: 100 requests per 10 seconds
+        self.request_timestamps = []  # Track request timestamps
+        self.max_requests_per_window = 100
+        self.rate_limit_window = 10  # 10 seconds
+        
         # Yahoo Finance forex pair mapping
         self.yahoo_pairs = {
             'EURUSD': 'EURUSD=X',
@@ -41,6 +46,47 @@ class DataFetcher:
         
         # Cache duration in seconds
         self.cache_duration = 60  # 1 minute for live data
+    
+    def _check_rate_limit(self) -> bool:
+        """
+        Check if we can make a request based on rate limiting (100 requests per 10 seconds)
+        Returns True if request is allowed, False if rate limited
+        """
+        current_time = time.time()
+        
+        # Remove timestamps older than the rate limit window
+        self.request_timestamps = [
+            timestamp for timestamp in self.request_timestamps 
+            if current_time - timestamp < self.rate_limit_window
+        ]
+        
+        # Check if we're within the rate limit
+        if len(self.request_timestamps) >= self.max_requests_per_window:
+            oldest_request = min(self.request_timestamps)
+            wait_time = self.rate_limit_window - (current_time - oldest_request)
+            
+            if wait_time > 0:
+                logger.warning(f"Rate limit reached. Need to wait {wait_time:.1f} seconds before next request")
+                return False
+        
+        # Add current timestamp and allow request
+        self.request_timestamps.append(current_time)
+        logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 10s")
+        return True
+    
+    def _wait_for_rate_limit(self) -> None:
+        """Wait if necessary to respect rate limiting"""
+        if not self._check_rate_limit():
+            current_time = time.time()
+            oldest_request = min(self.request_timestamps) if self.request_timestamps else current_time
+            wait_time = self.rate_limit_window - (current_time - oldest_request)
+            
+            if wait_time > 0:
+                logger.info(f"Rate limiting: waiting {wait_time:.1f} seconds...")
+                time.sleep(wait_time)
+                
+                # Check again after waiting
+                self._check_rate_limit()
         
     def _is_cache_valid(self, key: str) -> bool:
         """Check if cached data is still valid"""
@@ -57,7 +103,7 @@ class DataFetcher:
     
     def get_live_price(self, pair: str) -> Optional[Dict[str, Any]]:
         """
-        Get current live price for a forex pair
+        Get current live price for a forex pair with rate limiting
         """
         cache_key = f"live_{pair}"
         
@@ -66,6 +112,14 @@ class DataFetcher:
             return self.cache[cache_key]
         
         try:
+            # Check rate limit before making API calls
+            if not self._check_rate_limit():
+                logger.warning(f"Rate limit exceeded for {pair}. Using cached or mock data.")
+                # Try to return cached data even if expired, or generate mock data
+                if cache_key in self.cache:
+                    return self.cache[cache_key]
+                return self._generate_mock_price(pair)
+            
             # Try Yahoo Finance first
             yahoo_symbol = self.yahoo_pairs.get(pair)
             if yahoo_symbol:
@@ -149,7 +203,7 @@ class DataFetcher:
     
     def get_historical_data(self, pair: str, period: str = "3mo", interval: str = "1h") -> List[Dict[str, Any]]:
         """
-        Get historical price data for a forex pair
+        Get historical price data for a forex pair with rate limiting
         """
         cache_key = f"historical_{pair}_{period}_{interval}"
         
@@ -158,13 +212,20 @@ class DataFetcher:
             return self.cache[cache_key]
         
         try:
-            # Try Yahoo Finance
-            yahoo_symbol = self.yahoo_pairs.get(pair)
-            if yahoo_symbol:
-                historical_data = self._fetch_yahoo_historical(yahoo_symbol, period, interval)
-                if historical_data:
-                    self._set_cache(cache_key, historical_data, 300)  # Cache for 5 minutes
-                    return historical_data
+            # Check rate limit before making API calls
+            if self._check_rate_limit():
+                # Try Yahoo Finance
+                yahoo_symbol = self.yahoo_pairs.get(pair)
+                if yahoo_symbol:
+                    historical_data = self._fetch_yahoo_historical(yahoo_symbol, period, interval)
+                    if historical_data:
+                        self._set_cache(cache_key, historical_data, 300)  # Cache for 5 minutes
+                        return historical_data
+            else:
+                logger.warning(f"Rate limit exceeded for historical data {pair}. Using cached or mock data.")
+                # Try to return cached data even if expired
+                if cache_key in self.cache:
+                    return self.cache[cache_key]
             
             # Fallback to mock historical data
             historical_data = self._generate_mock_historical(pair, period, interval)
@@ -210,10 +271,10 @@ class DataFetcher:
         period_hours = {
             "1d": 24,
             "5d": 120,
-            "1mo": 720,
-            "3mo": 2160,
-            "6mo": 4320,
-            "1y": 8760
+            "1mo": 100,  # Reduced from 720
+            "3mo": 200,  # Reduced from 2160
+            "6mo": 300,  # Reduced from 4320
+            "1y": 400    # Reduced from 8760
         }
         
         interval_hours = {
@@ -225,9 +286,9 @@ class DataFetcher:
             "1d": 24
         }
         
-        total_hours = period_hours.get(period, 720)
+        total_hours = period_hours.get(period, 100)  # Default reduced to 100
         interval_hour = interval_hours.get(interval, 1)
-        num_points = min(int(total_hours / interval_hour), 1000)  # Limit to 1000 points
+        num_points = min(int(total_hours / interval_hour), 100)  # Reduced limit to 100 points
         
         # Base price for the pair
         base_prices = {
@@ -276,17 +337,18 @@ class DataFetcher:
         return data
     
     def get_forex_pairs_data(self) -> List[Dict[str, Any]]:
-        """Get live data for all major forex pairs"""
+        """Get live data for all major forex pairs with rate limiting"""
         pairs_data = []
         
         for pair in self.yahoo_pairs.keys():
             try:
+                # Rate limiting is handled within get_live_price method
                 price_data = self.get_live_price(pair)
                 if price_data:
                     pairs_data.append(price_data)
                     
-                # Small delay to avoid rate limiting
-                time.sleep(0.1)
+                # Reduced delay since we have higher rate limits now (100/10s vs 10/30s)
+                time.sleep(0.05)  # 50ms delay instead of 100ms
                 
             except Exception as e:
                 logger.error(f"Error fetching data for {pair}: {str(e)}")
