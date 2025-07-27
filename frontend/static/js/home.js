@@ -21,6 +21,9 @@ class HomePage {
             await this.loadFeaturedPairData();
             await this.loadMarketStats();
             
+            // Load mini chart
+            await this.loadMiniChart();
+            
             // Set up event listeners
             this.setupEventListeners();
             
@@ -182,6 +185,110 @@ class HomePage {
             console.error('Error loading signal data:', error);
             this.showFallbackSignal();
         }
+    }
+
+    async loadMiniChart() {
+        try {
+            const miniChartContainer = document.getElementById('mini-chart');
+            if (!miniChartContainer) return;
+
+            // Create a simple price chart using Chart.js
+            const canvas = document.createElement('canvas');
+            canvas.id = 'mini-chart-canvas';
+            canvas.width = 300;
+            canvas.height = 150;
+            
+            // Clear the placeholder and add canvas
+            miniChartContainer.innerHTML = '';
+            miniChartContainer.appendChild(canvas);
+
+            // Generate sample price data (in a real app, this would come from your API)
+            const sampleData = this.generateSampleChartData();
+            
+            // Create the chart
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: sampleData.labels,
+                    datasets: [{
+                        label: 'EUR/USD',
+                        data: sampleData.prices,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            display: false
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error loading mini chart:', error);
+            // Show fallback chart placeholder
+            const miniChartContainer = document.getElementById('mini-chart');
+            if (miniChartContainer) {
+                miniChartContainer.innerHTML = `
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Chart unavailable</span>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    generateSampleChartData() {
+        const labels = [];
+        const prices = [];
+        const basePrice = 1.0850;
+        const hours = 24;
+        
+        for (let i = 0; i < hours; i++) {
+            const time = new Date();
+            time.setHours(time.getHours() - (hours - i));
+            labels.push(time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+            
+            // Generate realistic price movement
+            const volatility = 0.002;
+            const trend = Math.sin(i / 6) * 0.001;
+            const random = (Math.random() - 0.5) * volatility;
+            const price = basePrice + trend + random;
+            prices.push(price.toFixed(4));
+        }
+        
+        return { labels, prices };
     }
 
     updateSignalDisplay(signal) {
