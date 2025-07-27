@@ -21,8 +21,10 @@ class HomePage {
             await this.loadFeaturedPairData();
             await this.loadMarketStats();
             
-            // Load mini chart
-            await this.loadMiniChart();
+            // Load mini chart with delay to ensure Chart.js is ready
+            setTimeout(() => {
+                this.loadMiniChart();
+            }, 1000);
             
             // Set up event listeners
             this.setupEventListeners();
@@ -189,9 +191,28 @@ class HomePage {
 
     async loadMiniChart() {
         try {
+            console.log('Loading mini chart...');
             const miniChartContainer = document.getElementById('mini-chart');
-            if (!miniChartContainer) return;
+            if (!miniChartContainer) {
+                console.error('Mini chart container not found');
+                return;
+            }
 
+            // Check if Chart.js is available
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded');
+                // Show fallback message
+                miniChartContainer.innerHTML = `
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Chart library loading...</span>
+                    </div>
+                `;
+                return;
+            }
+
+            console.log('Chart.js is available, creating chart...');
+            
             // Create a simple price chart using Chart.js
             const canvas = document.createElement('canvas');
             canvas.id = 'mini-chart-canvas';
@@ -204,9 +225,10 @@ class HomePage {
 
             // Generate sample price data (in a real app, this would come from your API)
             const sampleData = this.generateSampleChartData();
+            console.log('Sample data generated:', sampleData);
             
             // Create the chart
-            new Chart(canvas, {
+            const chart = new Chart(canvas, {
                 type: 'line',
                 data: {
                     labels: sampleData.labels,
@@ -254,6 +276,8 @@ class HomePage {
                 }
             });
             
+            console.log('Chart created successfully:', chart);
+            
         } catch (error) {
             console.error('Error loading mini chart:', error);
             // Show fallback chart placeholder
@@ -261,7 +285,7 @@ class HomePage {
             if (miniChartContainer) {
                 miniChartContainer.innerHTML = `
                     <div class="chart-placeholder">
-                        <i class="fas fa-chart-line"></i>
+                        <i class="fas fa-exclamation-triangle"></i>
                         <span>Chart unavailable</span>
                     </div>
                 `;
@@ -562,21 +586,25 @@ function closeTermsModal() {
 // Navigation functions
 function navigateToApp(tab = 'dashboard') {
     // Navigate to main app with specific tab
+    console.log('Navigating to app with tab:', tab);
     window.location.href = `app.html#${tab}`;
 }
 
 function navigateToAnalysis(pair = 'EURUSD') {
     // Navigate to analysis page with specific pair
+    console.log('Navigating to analysis with pair:', pair);
     window.location.href = `app.html#analysis?pair=${pair}`;
 }
 
 function navigateToChart(pair = 'EURUSD') {
     // Navigate to analysis page with chart focus
+    console.log('Navigating to chart with pair:', pair);
     window.location.href = `app.html#analysis?pair=${pair}&chart=true`;
 }
 
 function navigateToSignals() {
     // Navigate to signals page
+    console.log('Navigating to signals');
     window.location.href = `app.html#signals`;
 }
 
