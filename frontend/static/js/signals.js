@@ -6,6 +6,7 @@ class SignalManager {
     constructor() {
         this.signals = new Map();
         this.signalHistory = [];
+        this.currentFilterType = 'all'; // Track current filter type
         this.filters = {
             pair: '',
             direction: '',
