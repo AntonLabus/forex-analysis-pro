@@ -3,29 +3,18 @@
  * Optimized for Netlify deployment with Render backend
  */
 
-/**
- * Determine API base URL based on environment
- * @returns {string} API base URL
- */
 const getApiBaseUrl = () => {
-    // Runtime environment detection
     const hostname = window.location.hostname;
-    
-    // Development environment
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:5000';
     }
-    
-    // Production environment (Netlify deployment)
     return 'https://forex-analysis-pro.onrender.com';
 };
 
 const CONFIG = {
-    // API endpoints
     API_BASE_URL: getApiBaseUrl(),
     WEBSOCKET_URL: getApiBaseUrl(),
     
-    // API endpoints
     ENDPOINTS: {
         FOREX_PAIRS: '/api/forex/pairs',
         FOREX_DATA: '/api/forex/data',
@@ -36,7 +25,6 @@ const CONFIG = {
         HEALTH: '/api/health'
     },
     
-    // Currency pairs configuration
     CURRENCY_PAIRS: [
         { symbol: 'EURUSD', name: 'EUR/USD', base: 'EUR', quote: 'USD' },
         { symbol: 'GBPUSD', name: 'GBP/USD', base: 'GBP', quote: 'USD' },
@@ -48,7 +36,6 @@ const CONFIG = {
         { symbol: 'EURGBP', name: 'EUR/GBP', base: 'EUR', quote: 'GBP' }
     ],
     
-    // Timeframes
     TIMEFRAMES: [
         { value: '1m', label: '1 Minute' },
         { value: '5m', label: '5 Minutes' },
@@ -61,7 +48,6 @@ const CONFIG = {
         { value: '1mo', label: '1 Month' }
     ],
     
-    // Chart configuration
     CHART: {
         DEFAULT_HEIGHT: 500,
         THEME: {
@@ -86,7 +72,6 @@ const CONFIG = {
         }
     },
     
-    // Signal thresholds
     SIGNALS: {
         CONFIDENCE_THRESHOLDS: {
             EXCELLENT: 80,
@@ -101,14 +86,12 @@ const CONFIG = {
         }
     },
     
-    // Update intervals (in milliseconds)
     UPDATE_INTERVALS: {
-        PRICE_DATA: 30000,      // 30 seconds
-        SIGNALS: 60000,         // 1 minute
-        ANALYSIS: 300000        // 5 minutes
+        PRICE_DATA: 30000,
+        SIGNALS: 60000,
+        ANALYSIS: 300000
     },
     
-    // Notification settings
     NOTIFICATIONS: {
         DURATION: {
             SUCCESS: 3000,
@@ -120,14 +103,12 @@ const CONFIG = {
         POSITION: 'top-right'
     },
     
-    // Local storage keys
     STORAGE_KEYS: {
         THEME: 'forex_theme',
         WATCHLIST: 'forex_watchlist',
         SETTINGS: 'forex_settings'
     },
     
-    // Error messages
     ERRORS: {
         NETWORK_ERROR: 'Network connection error. Please check your internet connection.',
         API_ERROR: 'API request failed. Please try again later.',
@@ -136,20 +117,14 @@ const CONFIG = {
     }
 };
 
-// Environment-specific logging
 if (CONFIG.API_BASE_URL.includes('localhost')) {
-    console.log('🚀 Forex Analysis Pro - Development Mode');
-    console.log('📡 API Base URL:', CONFIG.API_BASE_URL);
-    console.log('🔌 WebSocket URL:', CONFIG.WEBSOCKET_URL);
+    console.log('Development Mode - API URL:', CONFIG.API_BASE_URL);
 } else {
-    console.log('🚀 Forex Analysis Pro - Production Mode');
-    console.log('📡 Connected to:', CONFIG.API_BASE_URL);
+    console.log('Production Mode - API URL:', CONFIG.API_BASE_URL);
 }
 
-// Make CONFIG globally available
 window.CONFIG = CONFIG;
 
-// Freeze the configuration to prevent accidental modifications
 Object.freeze(CONFIG);
 Object.freeze(CONFIG.CURRENCY_PAIRS);
 Object.freeze(CONFIG.TIMEFRAMES);

@@ -34,7 +34,6 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="static/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="static/apple-touch-icon.png">
 </head>
 <body class="dark-theme">
     <!-- Loading Screen -->
@@ -350,7 +349,7 @@
     </script>
     
     <!-- External config.js will override if it loads successfully -->
-    <script src="static/js/config.js" onload="console.log('External config.js loaded successfully')" onerror="console.warn('External config.js failed to load, using inline CONFIG')"></script>
+    <script src="static/js/config_clean.js?v=1.2" onload="console.log('External config_clean.js loaded successfully')" onerror="console.warn('External config_clean.js failed to load, using inline CONFIG')"></script>
     <script src="static/js/utils.js" onload="console.log('utils.js loaded')" onerror="console.error('Failed to load utils.js')"></script>
     <script src="static/js/chart.js" onload="console.log('chart.js loaded')" onerror="console.error('Failed to load chart.js')"></script>
     <script src="static/js/signals.js" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
@@ -480,33 +479,6 @@
             } catch (error) {
                 console.error('API test failed:', error);
                 debugStatus.innerHTML = `❌ Error: ${error.message}`;
-            }
-        }
-
-        // Force refresh data function
-        async function forceRefreshData() {
-            console.log('Force refreshing all data...');
-            if (window.app) {
-                const loadingPlaceholder = document.querySelector('.loading-placeholder');
-                if (loadingPlaceholder) {
-                    loadingPlaceholder.style.display = 'flex';
-                }
-                
-                try {
-                    await window.app.loadCurrencyPairs();
-                    
-                    // Load signals using signalManager
-                    if (window.signalManager) {
-                        console.log('Refreshing signals via signalManager...');
-                        await window.signalManager.fetchAllSignals();
-                    }
-                    
-                    console.log('Data refresh completed');
-                } catch (error) {
-                    console.error('Data refresh failed:', error);
-                }
-            } else {
-                console.error('App not initialized');
             }
         }
     </script>

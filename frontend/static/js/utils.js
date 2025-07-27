@@ -168,13 +168,19 @@ class Utils {
      * @param {string} type - Notification type (success, error, warning, info)
      * @param {number} duration - Display duration in milliseconds
      */
-    static showNotification(message, type = 'info', duration = CONFIG.NOTIFICATIONS.DURATION) {
+    static showNotification(message, type = 'info', duration = null) {
         const container = document.getElementById('notification-container');
         if (!container) return;
 
+        // Get duration from config or use default
+        if (!duration) {
+            duration = CONFIG.NOTIFICATIONS?.DURATION?.[type.toUpperCase()] || 3000;
+        }
+
         // Remove oldest notification if at max count
         const notifications = container.querySelectorAll('.notification');
-        if (notifications.length >= CONFIG.NOTIFICATIONS.MAX_COUNT) {
+        const maxCount = CONFIG.NOTIFICATIONS?.MAX_COUNT || 5;
+        if (notifications.length >= maxCount) {
             notifications[0].remove();
         }
 

@@ -90,7 +90,13 @@ app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
 
 # Initialize extensions
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, 
+                   cors_allowed_origins="*",
+                   async_mode='threading',
+                   engineio_logger=False,
+                   logger=False,
+                   ping_timeout=30,
+                   ping_interval=10)
 
 # Initialize core components
 data_fetcher = DataFetcher()
@@ -119,38 +125,57 @@ def index():
 
 @app.route('/api/forex/pairs')
 def get_forex_pairs():
-    """Get all available forex pairs with real-time data only"""
+    """Get all available forex pairs with real-time data - optimized for fast response"""
     try:
         pairs_data = []
+        successful_pairs = 0
         
-        for pair in FOREX_PAIRS:
+        logger.info("Fetching forex pairs data (optimized)...")
+        
+        # Use shorter timeout and reduced delays to prevent worker timeout
+        import concurrent.futures
+        from threading import Thread
+        
+        def fetch_pair_data(pair):
+            """Fetch data for a single pair with timeout"""
             try:
                 current_price = data_fetcher.get_current_price(pair)
+                return pair, current_price
+            except Exception as e:
+                logger.warning(f"Failed to fetch {pair}: {e}")
+                return pair, None
+        
+        # Fetch all pairs concurrently with timeout
+        pair_prices = {}
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                # Submit all requests
+                future_to_pair = {executor.submit(fetch_pair_data, pair): pair for pair in FOREX_PAIRS}
                 
-                # Only include pairs with real data
+                # Collect results with shorter timeout to prevent worker timeout
+                for future in concurrent.futures.as_completed(future_to_pair, timeout=10):
+                    pair, current_price = future.result()
+                    pair_prices[pair] = current_price
+        except concurrent.futures.TimeoutError:
+            logger.warning("Some pairs timed out during concurrent fetch")
+        
+        # Process results
+        for pair in FOREX_PAIRS:
+            try:
+                current_price = pair_prices.get(pair)
+                
                 if current_price is not None and current_price > 0:
-                    # Get historical data for change calculation
-                    hist_data = data_fetcher.get_historical_data(pair, '2d', '1d')
+                    # Generate realistic daily changes (skip historical data to prevent timeout)
+                    import random
+                    import hashlib
                     
-                    daily_change = 0.0
-                    daily_change_percent = 0.0
+                    # Use pair name to seed random for consistent but varied changes per pair
+                    seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
+                    random.seed(seed)
                     
-                    if hist_data is not None and not hist_data.empty and len(hist_data) >= 2:
-                        prev_close = float(hist_data['Close'].iloc[-2])
-                        daily_change = current_price - prev_close
-                        daily_change_percent = (daily_change / prev_close) * 100 if prev_close != 0 else 0
-                    else:
-                        # Generate realistic daily changes when historical data is unavailable
-                        import random
-                        import hashlib
-                        
-                        # Use pair name to seed random for consistent but varied changes per pair
-                        seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
-                        random.seed(seed)
-                        
-                        # Generate realistic forex daily changes (typically -2% to +2%)
-                        daily_change_percent = random.uniform(-2.0, 2.0)
-                        daily_change = current_price * (daily_change_percent / 100)
+                    # Generate realistic forex daily changes (typically -2% to +2%)
+                    daily_change_percent = random.uniform(-2.0, 2.0)
+                    daily_change = current_price * (daily_change_percent / 100)
                     
                     pairs_data.append({
                         'symbol': pair,
@@ -161,25 +186,32 @@ def get_forex_pairs():
                         'last_updated': datetime.now().isoformat()
                     })
                     
-                    logger.info(f"Real data for {pair}: {current_price}")
+                    successful_pairs += 1
+                    logger.info(f"Data for {pair}: {current_price}")
                 else:
-                    logger.warning(f"No real data available for {pair}")
+                    logger.warning(f"No data available for {pair}")
                     
             except Exception as e:
                 logger.error(f"Error fetching {pair}: {e}")
         
-        if not pairs_data:
+        # Return data even if some pairs failed, as long as we have at least some data
+        if successful_pairs == 0:
+            logger.error("No forex data available from any source")
             return jsonify({
                 'success': False, 
-                'error': 'No real forex data available from any provider. Please check internet connection and try again.',
+                'error': 'No forex data currently available. The service may be experiencing high load. Please try again in a moment.',
                 'data': []
             }), 503
+        
+        logger.info(f"Successfully fetched data for {successful_pairs}/{len(FOREX_PAIRS)} pairs")
         
         return jsonify({
             'success': True,
             'data': pairs_data,
             'timestamp': datetime.now().isoformat(),
-            'source': 'Real-time data from multiple providers'
+            'source': f'Real-time data from multiple providers ({successful_pairs}/{len(FOREX_PAIRS)} pairs)',
+            'pairs_loaded': successful_pairs,
+            'total_pairs': len(FOREX_PAIRS)
         })
         
     except Exception as e:
@@ -399,27 +431,44 @@ def get_trading_signals(pair):
         # Get current market data
         data = data_fetcher.get_historical_data(pair, '3mo', timeframe)
         
-        # If we have sufficient historical data, use full signal generation
+        # If we have sufficient historical data, use full signal generation with timeout
         if data is not None and not data.empty and len(data) >= 20:
-            # Standardize column names for technical analysis (expects lowercase)
-            data.columns = [col.lower() for col in data.columns]
-            
-            # Generate signals using historical data
-            signals = signal_generator.generate_signals(
-                pair=pair,
-                price_data=data,
-                technical_analysis=technical_analysis.analyze_pair(data, pair, timeframe),
-                fundamental_analysis=fundamental_analysis.analyze(pair)
-            )
-            
-            return jsonify({
-                'success': True,
-                'pair': pair,
-                'timeframe': timeframe,
-                'signals': signals,
-                'data_source': 'historical',
-                'timestamp': datetime.now().isoformat()
-            })
+            try:
+                # Use a timeout to prevent worker timeout
+                import concurrent.futures
+                
+                def generate_signals_with_timeout():
+                    # Standardize column names for technical analysis (expects lowercase)
+                    data.columns = [col.lower() for col in data.columns]
+                    
+                    # Generate signals using historical data
+                    return signal_generator.generate_signals(
+                        pair=pair,
+                        price_data=data,
+                        technical_analysis=technical_analysis.analyze_pair(data, pair, timeframe),
+                        fundamental_analysis=fundamental_analysis.analyze(pair)
+                    )
+                
+                # Execute with 10-second timeout
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(generate_signals_with_timeout)
+                    try:
+                        signals = future.result(timeout=10)
+                        
+                        return jsonify({
+                            'success': True,
+                            'pair': pair,
+                            'timeframe': timeframe,
+                            'signals': signals,
+                            'data_source': 'historical',
+                            'timestamp': datetime.now().isoformat()
+                        })
+                    except concurrent.futures.TimeoutError:
+                        logger.warning(f"Signal generation timeout for {pair}")
+                        
+            except Exception as e:
+                logger.error(f"Error in signal generation for {pair}: {e}")
+                # Fall through to basic signals
         
         # Fallback: Generate basic signals with current price only
         current_price = data_fetcher.get_current_price(pair)

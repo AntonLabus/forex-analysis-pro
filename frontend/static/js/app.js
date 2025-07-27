@@ -9,6 +9,7 @@ class ForexAnalysisApp {
         this.currencyData = new Map();
         this.analysisData = new Map();
         this.autoRefreshIntervals = new Map();
+        this.fallbackUpdateInterval = null;
         
         this.init();
     }
@@ -68,6 +69,18 @@ class ForexAnalysisApp {
             });
         }
 
+        // Main refresh button
+        const refreshBtn = document.querySelector('.refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.refreshAllData();
+            });
+        }
+
+        // Make refresh function globally available for inline onclick handlers
+        window.forceRefreshData = () => this.refreshAllData();
+
         // Analysis controls
         const analyzeBtn = document.getElementById('analyze-btn');
         if (analyzeBtn) {
@@ -87,9 +100,26 @@ class ForexAnalysisApp {
         // Signal controls
         const refreshSignalsBtn = document.getElementById('refresh-signals');
         if (refreshSignalsBtn) {
-            refreshSignalsBtn.addEventListener('click', () => {
-                if (window.signalManager) {
-                    window.signalManager.refreshSignals();
+            refreshSignalsBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                
+                // Show loading state
+                const originalText = refreshSignalsBtn.innerHTML;
+                refreshSignalsBtn.disabled = true;
+                refreshSignalsBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                
+                try {
+                    if (window.signalManager) {
+                        await window.signalManager.fetchAllSignals();
+                        Utils.showNotification('Signals refreshed successfully', 'success');
+                    }
+                } catch (error) {
+                    console.error('Failed to refresh signals:', error);
+                    Utils.showNotification('Failed to refresh signals', 'error');
+                } finally {
+                    // Restore button
+                    refreshSignalsBtn.disabled = false;
+                    refreshSignalsBtn.innerHTML = originalText;
                 }
             });
         }
@@ -139,14 +169,27 @@ class ForexAnalysisApp {
             }
 
             console.log('Initializing WebSocket connection to:', CONFIG.WEBSOCKET_URL);
+            
+            // Start with fallback updates immediately, then try WebSocket
+            this.startFallbackUpdates();
+            
+            // More conservative WebSocket configuration for production
             this.socket = io(CONFIG.WEBSOCKET_URL, {
-                timeout: 10000,
-                transports: ['websocket', 'polling']
+                timeout: 10000,  // Shorter timeout
+                reconnection: true,
+                reconnectionAttempts: 3,  // Fewer attempts
+                reconnectionDelay: 5000,  // Longer delay between attempts
+                transports: ['polling'],  // Start with polling only
+                upgrade: false,  // Don't try to upgrade to websocket initially
+                forceNew: true
             });
 
             this.socket.on('connect', () => {
-                console.log('WebSocket connected');
+                console.log('WebSocket connected successfully');
                 this.updateConnectionStatus(true);
+                
+                // Stop fallback updates since WebSocket is now connected
+                this.stopFallbackUpdates();
                 
                 // Subscribe to price updates for all pairs
                 if (CONFIG.CURRENCY_PAIRS) {
@@ -156,14 +199,31 @@ class ForexAnalysisApp {
                 }
             });
 
-            this.socket.on('disconnect', () => {
-                console.log('WebSocket disconnected');
+            this.socket.on('disconnect', (reason) => {
+                console.log('WebSocket disconnected:', reason);
                 this.updateConnectionStatus(false);
+                
+                // Restart fallback updates when WebSocket disconnects
+                this.startFallbackUpdates();
             });
 
             this.socket.on('connect_error', (error) => {
                 console.warn('WebSocket connection error:', error);
                 this.updateConnectionStatus(false);
+                
+                // If WebSocket fails, continue with polling-only updates
+                if (!this.fallbackUpdateInterval) {
+                    this.startFallbackUpdates();
+                }
+            });
+
+            this.socket.on('reconnect', (attemptNumber) => {
+                console.log('WebSocket reconnected after', attemptNumber, 'attempts');
+                this.updateConnectionStatus(true);
+            });
+
+            this.socket.on('reconnect_error', (error) => {
+                console.warn('WebSocket reconnection failed:', error);
             });
 
             this.socket.on('price_update', (data) => {
@@ -175,12 +235,58 @@ class ForexAnalysisApp {
             });
 
             this.socket.on('status', (data) => {
-                console.log('Status:', data.message);
+                console.log('WebSocket status:', data.message);
             });
+
+            // Shorter timeout since we already started fallback updates
+            setTimeout(() => {
+                if (!this.socket || !this.socket.connected) {
+                    console.log('WebSocket connection timeout - continuing with polling mode');
+                    this.updateConnectionStatus(false, 'Using polling mode');
+                }
+            }, 15000);  // Reduced from 30 to 15 seconds
 
         } catch (error) {
             console.error('Failed to initialize WebSocket:', error);
             this.updateConnectionStatus(false);
+            this.startFallbackUpdates();
+        }
+    }
+
+    /**
+     * Start fallback polling updates when WebSocket is not available
+     */
+    startFallbackUpdates() {
+        if (this.fallbackUpdateInterval) {
+            return; // Already running
+        }
+
+        console.log('Starting fallback polling updates...');
+        this.updateConnectionStatus(false, 'Using polling updates');
+        
+        // Update data every 30 seconds via REST API
+        this.fallbackUpdateInterval = setInterval(async () => {
+            try {
+                console.log('Fallback update: refreshing data...');
+                await this.loadCurrencyPairs();
+                
+                if (window.signalManager) {
+                    await window.signalManager.fetchAllSignals();
+                }
+            } catch (error) {
+                console.error('Fallback update failed:', error);
+            }
+        }, 30000);
+    }
+
+    /**
+     * Stop fallback updates
+     */
+    stopFallbackUpdates() {
+        if (this.fallbackUpdateInterval) {
+            clearInterval(this.fallbackUpdateInterval);
+            this.fallbackUpdateInterval = null;
+            console.log('Fallback polling updates stopped');
         }
     }
 
@@ -188,27 +294,166 @@ class ForexAnalysisApp {
      * Load initial application data
      */
     async loadInitialData() {
+        console.log('Loading initial application data...');
         Utils.showLoading('Loading market data...');
 
         try {
             console.log('Starting to load initial data...');
             
-            // Load currency pairs data
-            await this.loadCurrencyPairs();
+            // Try to load data with timeout
+            const loadPromise = this.loadDataWithRetry();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Loading timeout - backend may be cold starting')), 45000)
+            );
             
-            // Load signals for all pairs
-            if (window.signalManager) {
-                console.log('Loading signals...');
-                await window.signalManager.fetchAllSignals();
-            }
+            await Promise.race([loadPromise, timeoutPromise]);
+            
+            // Update last refresh time
+            this.updateLastRefreshTime();
             
             console.log('Initial data loaded successfully');
+            Utils.showNotification('Market data loaded successfully', 'success');
             
         } catch (error) {
             console.error('Failed to load initial data:', error);
-            Utils.showNotification('Some data could not be loaded. The app will continue with limited functionality.', 'warning');
+            
+            if (error.message.includes('timeout')) {
+                Utils.showNotification('Backend is starting up (this can take 30-60 seconds). Please wait and try refreshing.', 'warning');
+                this.showFallbackData();
+            } else {
+                Utils.showNotification('Some data could not be loaded. The app will continue with limited functionality.', 'warning');
+            }
         } finally {
             Utils.hideLoading();
+        }
+    }
+
+    /**
+     * Load data with retry mechanism
+     */
+    async loadDataWithRetry() {
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                console.log(`Data loading attempt ${attempts + 1}/${maxAttempts}`);
+                
+                // Load currency pairs data first
+                await this.loadCurrencyPairs();
+                
+                // Load signals for all pairs
+                if (window.signalManager) {
+                    console.log('Loading initial signals...');
+                    await window.signalManager.fetchAllSignals();
+                }
+                
+                return; // Success
+                
+            } catch (error) {
+                attempts++;
+                console.warn(`Attempt ${attempts} failed:`, error.message);
+                
+                if (attempts < maxAttempts) {
+                    console.log(`Retrying in ${attempts * 2} seconds...`);
+                    await new Promise(resolve => setTimeout(resolve, attempts * 2000));
+                } else {
+                    throw error;
+                }
+            }
+        }
+    }
+
+    /**
+     * Show fallback data when API is unavailable
+     */
+    showFallbackData() {
+        console.log('Showing fallback data while backend starts up...');
+        
+        const grid = document.getElementById('currency-grid');
+        if (grid) {
+            grid.innerHTML = `
+                <div class="fallback-message" style="grid-column: 1 / -1; text-align: center; padding: 40px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px dashed #3b82f6;">
+                    <i class="fas fa-cloud" style="font-size: 48px; color: #3b82f6; margin-bottom: 16px;"></i>
+                    <h3 style="color: #3b82f6; margin-bottom: 8px;">Backend Starting Up</h3>
+                    <p style="color: #94a3b8; margin-bottom: 16px;">
+                        The Render backend is currently starting up. This can take 30-60 seconds for the first request.
+                    </p>
+                    <button onclick="window.app.refreshAllData()" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">
+                        <i class="fas fa-sync-alt"></i> Try Again
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Update connection status
+        this.updateConnectionStatus(false, 'Backend starting...');
+    }
+
+    /**
+     * Refresh all application data (for manual refresh button)
+     */
+    async refreshAllData() {
+        console.log('Manually refreshing all data...');
+        
+        // Show loading state on refresh button
+        const refreshBtn = document.querySelector('.refresh-btn');
+        const refreshIcon = refreshBtn?.querySelector('i');
+        const originalText = refreshBtn?.textContent;
+        
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        }
+
+        try {
+            // Show loading for currency pairs grid
+            const loadingPlaceholder = document.querySelector('.loading-placeholder');
+            if (loadingPlaceholder) {
+                loadingPlaceholder.style.display = 'flex';
+            }
+            
+            console.log('Refreshing currency pairs...');
+            await this.loadCurrencyPairs();
+            
+            // Refresh signals
+            if (window.signalManager) {
+                console.log('Refreshing signals via signalManager...');
+                await window.signalManager.fetchAllSignals();
+            }
+            
+            // Update last refresh time
+            this.updateLastRefreshTime();
+            
+            console.log('Data refresh completed successfully');
+            Utils.showNotification('Data refreshed successfully', 'success');
+            
+        } catch (error) {
+            console.error('Data refresh failed:', error);
+            Utils.showNotification('Failed to refresh data. Please try again.', 'error');
+        } finally {
+            // Restore refresh button
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Data';
+            }
+            
+            // Hide loading placeholder
+            const loadingPlaceholder = document.querySelector('.loading-placeholder');
+            if (loadingPlaceholder) {
+                loadingPlaceholder.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Update the last refresh time display
+     */
+    updateLastRefreshTime() {
+        const lastUpdatedElement = document.getElementById('last-updated-time');
+        if (lastUpdatedElement) {
+            const now = new Date();
+            lastUpdatedElement.textContent = now.toLocaleTimeString();
         }
     }
 
@@ -229,7 +474,7 @@ class ForexAnalysisApp {
                 });
                 
                 this.updateCurrencyGrid();
-                this.updateLastUpdatedTime();
+                this.updateLastRefreshTime();
                 console.log('Currency pairs loaded successfully');
             } else {
                 throw new Error(response.error || 'Failed to load currency pairs - invalid response structure');
@@ -574,7 +819,7 @@ class ForexAnalysisApp {
 
         // Update UI
         this.updateCurrencyCard(pair);
-        this.updateLastUpdatedTime();
+        this.updateLastRefreshTime();
     }
 
     /**
@@ -612,8 +857,9 @@ class ForexAnalysisApp {
     /**
      * Update connection status indicator
      * @param {boolean} connected - Connection status
+     * @param {string} customText - Custom status text
      */
-    updateConnectionStatus(connected) {
+    updateConnectionStatus(connected, customText = null) {
         const status = document.getElementById('connection-status');
         if (!status) return;
 
@@ -622,20 +868,10 @@ class ForexAnalysisApp {
 
         if (connected) {
             status.className = 'connection-status connected';
-            text.textContent = 'Connected';
+            text.textContent = customText || 'Connected';
         } else {
             status.className = 'connection-status disconnected';
-            text.textContent = 'Disconnected';
-        }
-    }
-
-    /**
-     * Update last updated time
-     */
-    updateLastUpdatedTime() {
-        const element = document.getElementById('last-updated-time');
-        if (element) {
-            element.textContent = new Date().toLocaleTimeString();
+            text.textContent = customText || 'Disconnected';
         }
     }
 

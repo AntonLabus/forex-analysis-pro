@@ -334,9 +334,40 @@ class SignalGenerator:
     def _calculate_risk_metrics(self, price_data: pd.DataFrame, tech_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate risk metrics for the trade"""
         try:
-            close_prices = price_data['Close'].values
+            # Check if required columns exist
+            if price_data is None or price_data.empty:
+                logger.warning("Empty price data for risk calculation")
+                return {
+                    'volatility': 1.5,
+                    'risk_level': 'MEDIUM',
+                    'max_risk_percent': 2.0,
+                    'confidence_adjustment': 0.0
+                }
+            
+            # Normalize column names (handle both 'close' and 'Close')
+            if 'Close' in price_data.columns:
+                close_prices = price_data['Close'].values
+            elif 'close' in price_data.columns:
+                close_prices = price_data['close'].values
+            else:
+                logger.warning("No Close column found in price data")
+                return {
+                    'volatility': 1.5,
+                    'risk_level': 'MEDIUM',
+                    'max_risk_percent': 2.0,
+                    'confidence_adjustment': 0.0
+                }
             
             # Calculate volatility (20-period standard deviation)
+            if len(close_prices) < 2:
+                logger.warning("Insufficient data for volatility calculation")
+                return {
+                    'volatility': 1.5,
+                    'risk_level': 'MEDIUM',
+                    'max_risk_percent': 2.0,
+                    'confidence_adjustment': 0.0
+                }
+                
             returns = np.diff(np.log(close_prices))
             volatility = np.std(returns[-20:]) * np.sqrt(252) * 100  # Annualized volatility
             
@@ -376,7 +407,32 @@ class SignalGenerator:
                                    signal: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate entry and exit levels"""
         try:
-            current_price = price_data['Close'].iloc[-1]
+            # Check if price data is valid
+            if price_data is None or price_data.empty:
+                logger.warning("Empty price data for entry/exit calculation")
+                return {
+                    'entry': 1.0000,
+                    'stop_loss': 0.9950,
+                    'take_profit_1': 1.0050,
+                    'take_profit_2': 1.0100,
+                    'risk_reward_ratio': 2.0
+                }
+            
+            # Handle column name variations
+            if 'Close' in price_data.columns:
+                current_price = price_data['Close'].iloc[-1]
+            elif 'close' in price_data.columns:
+                current_price = price_data['close'].iloc[-1]
+            else:
+                logger.warning("No Close column found for entry/exit calculation")
+                return {
+                    'entry': 1.0000,
+                    'stop_loss': 0.9950,
+                    'take_profit_1': 1.0050,
+                    'take_profit_2': 1.0100,
+                    'risk_reward_ratio': 2.0
+                }
+                
             atr = tech_analysis.get('volatility_indicators', {}).get('atr', current_price * 0.01)
             
             signal_direction = signal.get('direction', 'HOLD')
