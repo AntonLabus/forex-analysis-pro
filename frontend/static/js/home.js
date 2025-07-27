@@ -405,17 +405,6 @@ class HomePage {
             
             console.log('Chart created successfully with real data:', chart);
             
-            // Show data source indicator
-            if (chartData.source) {
-                const sourceIndicator = document.createElement('div');
-                sourceIndicator.className = 'chart-source-indicator';
-                sourceIndicator.innerHTML = `
-                    <i class="fas fa-${chartData.source === 'historical' ? 'database' : 'flask'}"></i>
-                    <span>${chartData.source === 'historical' ? 'Real Data' : 'Demo Data'}</span>
-                `;
-                container.appendChild(sourceIndicator);
-            }
-            
         } catch (error) {
             console.error('Error creating chart with real data:', error);
             // Fall back to sample data chart
