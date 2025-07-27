@@ -653,29 +653,41 @@ class ForexAnalysisApp {
     async performAnalysis() {
         const pair = document.getElementById('analysis-pair')?.value;
         const timeframe = document.getElementById('analysis-timeframe')?.value;
+        const analyzeBtn = document.getElementById('analyze-btn');
 
         if (!pair || !timeframe) {
             Utils.showNotification('Please select a currency pair and timeframe', 'warning');
             return;
         }
 
-        Utils.showLoading('Performing analysis...');
+        // Start loading animation
+        this.startAnalysisLoading();
 
         try {
             console.log('Starting analysis for pair:', pair, 'timeframe:', timeframe);
             
-            // Fetch price data
+            // Step 1: Fetch price data (25% progress)
+            this.updateAnalysisProgress(25, 'Fetching price data...');
             const priceData = await this.fetchPriceData(pair, timeframe);
             console.log('Price data fetched:', priceData);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for UX
             
-            // Fetch technical analysis
+            // Step 2: Fetch technical analysis (50% progress)
+            this.updateAnalysisProgress(50, 'Performing technical analysis...');
             const technicalAnalysis = await this.fetchTechnicalAnalysis(pair, timeframe);
             console.log('Technical analysis fetched:', technicalAnalysis);
+            await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
             
-            // Fetch fundamental analysis
+            // Step 3: Fetch fundamental analysis (75% progress)
+            this.updateAnalysisProgress(75, 'Analyzing fundamentals...');
             const fundamentalAnalysis = await this.fetchFundamentalAnalysis(pair);
             console.log('Fundamental analysis fetched:', fundamentalAnalysis);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for UX
 
+            // Step 4: Update chart and results (100% progress)
+            this.updateAnalysisProgress(90, 'Generating chart...');
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for UX
+            
             // Update chart
             if (window.chartManager && priceData) {
                 console.log('Creating chart with chartManager and priceData available');
@@ -686,12 +698,68 @@ class ForexAnalysisApp {
 
             // Update analysis results
             this.updateAnalysisResults(technicalAnalysis, fundamentalAnalysis);
+            
+            // Complete
+            this.updateAnalysisProgress(100, 'Analysis complete!');
+            
+            // Small delay to show completion
+            await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (error) {
             console.error('Analysis failed:', error);
             Utils.showNotification('Analysis failed. Please try again.', 'error');
         } finally {
-            Utils.hideLoading();
+            this.stopAnalysisLoading();
+        }
+    }
+
+    /**
+     * Start analysis loading animation
+     */
+    startAnalysisLoading() {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.classList.add('loading');
+            analyzeBtn.disabled = true;
+        }
+    }
+
+    /**
+     * Update analysis progress
+     * @param {number} percentage - Progress percentage (0-100)
+     * @param {string} message - Progress message
+     */
+    updateAnalysisProgress(percentage, message) {
+        const progressFill = document.querySelector('.analyze-progress-fill');
+        const progressText = document.querySelector('.analyze-progress-text');
+        
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = message;
+        }
+        
+        console.log(`Analysis progress: ${percentage}% - ${message}`);
+    }
+
+    /**
+     * Stop analysis loading animation
+     */
+    stopAnalysisLoading() {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.classList.remove('loading');
+            analyzeBtn.disabled = false;
+        }
+        
+        // Reset progress
+        const progressFill = document.querySelector('.analyze-progress-fill');
+        if (progressFill) {
+            setTimeout(() => {
+                progressFill.style.width = '0%';
+            }, 300);
         }
     }
 
