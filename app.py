@@ -139,6 +139,11 @@ FOREX_PAIRS = [
 ]
 
 @app.route('/')
+def home():
+    """Home page - landing page with featured pair"""
+    return render_template('home.html')
+
+@app.route('/app')
 def index():
     """Main dashboard page"""
     return render_template('index.html')
