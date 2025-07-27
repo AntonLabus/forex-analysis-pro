@@ -90,6 +90,18 @@ body {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--accent-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logo:hover {
+  color: var(--accent-color);
+  transform: scale(1.02);
+}
+
+.logo:visited {
+  color: var(--accent-color);
 }
 
 .logo i {
