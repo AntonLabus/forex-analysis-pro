@@ -30,6 +30,8 @@ class HomePage {
             
             // Load mini chart with delay to ensure Chart.js is ready
             console.log('Setting up chart loading timeout...');
+            // Show CSS fallback immediately for better UX
+            this.showFallbackChart(document.getElementById('mini-chart'));
             setTimeout(() => {
                 console.log('Chart loading timeout triggered, calling loadMiniChart...');
                 this.loadMiniChart();
