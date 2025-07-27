@@ -25,9 +25,9 @@ class DataFetcher:
         self.cache = {}
         self.cache_expiry = {}
         
-        # Rate limiting: 100 requests per 10 seconds
+        # Rate limiting: 150 requests per 10 seconds
         self.request_timestamps = []  # Track request timestamps
-        self.max_requests_per_window = 100
+        self.max_requests_per_window = 150
         self.rate_limit_window = 10  # 10 seconds
         
         # Yahoo Finance forex pair mapping
@@ -49,7 +49,7 @@ class DataFetcher:
     
     def _check_rate_limit(self) -> bool:
         """
-        Check if we can make a request based on rate limiting (100 requests per 10 seconds)
+        Check if we can make a request based on rate limiting (150 requests per 10 seconds)
         Returns True if request is allowed, False if rate limited
         """
         current_time = time.time()
@@ -347,8 +347,8 @@ class DataFetcher:
                 if price_data:
                     pairs_data.append(price_data)
                     
-                # Reduced delay since we have higher rate limits now (100/10s vs 10/30s)
-                time.sleep(0.05)  # 50ms delay instead of 100ms
+                # Reduced delay since we have higher rate limits now (150/10s)
+                time.sleep(0.03)  # 30ms delay for even better performance
                 
             except Exception as e:
                 logger.error(f"Error fetching data for {pair}: {str(e)}")
