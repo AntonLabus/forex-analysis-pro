@@ -15,6 +15,10 @@ class HomePage {
     async init() {
         try {
             console.log('Starting home page initialization...');
+            
+            // Set initial connection status
+            this.updateConnectionStatus(false, 'Starting...');
+            
             // Initialize theme
             this.initTheme();
             console.log('Theme initialized');
@@ -52,6 +56,7 @@ class HomePage {
             console.log('Home page initialized successfully');
         } catch (error) {
             console.error('Failed to initialize home page:', error);
+            this.updateConnectionStatus(false, 'Error');
         }
     }
 
@@ -682,17 +687,47 @@ class HomePage {
 
     initWebSocket() {
         try {
+            // Check if Socket.io is available
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io not available, using polling mode only');
+                this.updateConnectionStatus(false, 'Polling Mode');
+                return;
+            }
+
             const wsUrl = window.CONFIG?.WEBSOCKET_URL || 'http://localhost:5000';
-            this.socket = io(wsUrl);
+            console.log('Attempting WebSocket connection to:', wsUrl);
+            
+            // Set initial status as connecting
+            this.updateConnectionStatus(false, 'Connecting...');
+            
+            // Set connection timeout
+            const connectionTimeout = setTimeout(() => {
+                console.log('WebSocket connection timeout - using polling mode');
+                this.updateConnectionStatus(false, 'Polling Mode');
+            }, 10000); // 10 second timeout
+            
+            this.socket = io(wsUrl, {
+                timeout: 8000,
+                reconnection: true,
+                reconnectionAttempts: 3,
+                reconnectionDelay: 2000
+            });
             
             this.socket.on('connect', () => {
-                console.log('WebSocket connected');
+                console.log('WebSocket connected successfully');
+                clearTimeout(connectionTimeout);
                 this.updateConnectionStatus(true);
             });
             
-            this.socket.on('disconnect', () => {
-                console.log('WebSocket disconnected');
-                this.updateConnectionStatus(false);
+            this.socket.on('disconnect', (reason) => {
+                console.log('WebSocket disconnected:', reason);
+                this.updateConnectionStatus(false, 'Polling Mode');
+            });
+            
+            this.socket.on('connect_error', (error) => {
+                console.warn('WebSocket connection error:', error.message);
+                clearTimeout(connectionTimeout);
+                this.updateConnectionStatus(false, 'Polling Mode');
             });
             
             this.socket.on('price_update', (data) => {
@@ -703,10 +738,11 @@ class HomePage {
             
         } catch (error) {
             console.error('WebSocket initialization failed:', error);
+            this.updateConnectionStatus(false, 'Polling Mode');
         }
     }
 
-    updateConnectionStatus(connected) {
+    updateConnectionStatus(connected, customMessage = null) {
         const statusElement = document.getElementById('connection-status');
         if (statusElement) {
             const icon = statusElement.querySelector('i');
@@ -717,11 +753,19 @@ class HomePage {
                 icon.style.color = 'var(--success-color)';
                 text.textContent = 'Live';
                 statusElement.style.color = 'var(--success-color)';
+                statusElement.title = 'Real-time WebSocket connection active';
+            } else if (customMessage) {
+                icon.className = 'fas fa-circle';
+                icon.style.color = customMessage === 'Connecting...' ? '#fbbf24' : '#10b981'; // Yellow for connecting, green for polling
+                text.textContent = customMessage;
+                statusElement.style.color = customMessage === 'Connecting...' ? '#fbbf24' : '#10b981';
+                statusElement.title = customMessage === 'Connecting...' ? 'Connecting to real-time updates...' : 'Using polling updates - data refreshes every 30 seconds';
             } else {
                 icon.className = 'fas fa-circle';
                 icon.style.color = 'var(--warning-color)';
                 text.textContent = 'Offline';
                 statusElement.style.color = 'var(--warning-color)';
+                statusElement.title = 'No connection available';
             }
         }
     }
