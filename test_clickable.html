@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Clickable Stats</title>
+    <style>
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 10px;
+            color: white;
+        }
+
+        .stat-card.clickable-stat {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.clickable-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+            border-color: #60a5fa;
+        }
+
+        .stat-arrow {
+            margin-left: auto;
+            color: #cbd5e1;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.clickable-stat:hover .stat-arrow {
+            color: #60a5fa;
+            transform: translateX(3px);
+        }
+
+        .stat-icon {
+            width: 3rem;
+            height: 3rem;
+            background: #3b82f6;
+            color: white;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body style="background: #0f172a; font-family: Arial, sans-serif;">
+    <h1 style="color: white; text-align: center;">Test Clickable Stats</h1>
+    
+    <div class="stat-card clickable-stat" onclick="alert('Active Signals clicked!')" title="Click to view all signals">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+            <div class="stat-value" style="font-size: 1.5rem; font-weight: bold;">8</div>
+            <div class="stat-label" style="color: #cbd5e1;">Active Signals</div>
+        </div>
+        <div class="stat-arrow">➤</div>
+    </div>
+
+    <div class="stat-card clickable-stat" onclick="alert('Bullish Signals clicked!')" title="Click to view bullish signals">
+        <div class="stat-icon">📈</div>
+        <div class="stat-info">
+            <div class="stat-value" style="font-size: 1.5rem; font-weight: bold;">2</div>
+            <div class="stat-label" style="color: #cbd5e1;">Bullish Signals</div>
+        </div>
+        <div class="stat-arrow">➤</div>
+    </div>
+
+    <p style="color: white; text-align: center; margin-top: 30px;">
+        Hover over the cards above to see the hover effects. Click them to test the onclick functionality.
+    </p>
+</body>
+</html>

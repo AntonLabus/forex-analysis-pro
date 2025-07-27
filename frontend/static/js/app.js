@@ -83,14 +83,19 @@ class ForexAnalysisApp {
 
         // Make navigation function globally available for stat cards
         window.navigateToSignals = (filterType) => {
+            console.log('navigateToSignals called with filterType:', filterType);
+            
             // Switch to signals tab
             this.switchTab('signals');
             
             // Apply filter if signal manager exists
             if (window.signalManager && typeof window.signalManager.applyFilter === 'function') {
                 setTimeout(() => {
+                    console.log('Applying filter:', filterType);
                     window.signalManager.applyFilter(filterType);
                 }, 100);
+            } else {
+                console.warn('signalManager not available or applyFilter method missing');
             }
             
             // Show notification about the filter
