@@ -187,14 +187,22 @@ class HomePage {
 
     async loadFeaturedSignal() {
         try {
+            console.log('Loading featured signal for:', this.featuredPair);
             const apiUrl = window.CONFIG?.API_BASE_URL || 'http://localhost:5000';
-            const response = await fetch(`${apiUrl}/api/signals?pair=${this.featuredPair}&timeframe=1h`);
+            const signalUrl = `${apiUrl}/api/signals/${this.featuredPair}?timeframe=1h`;
+            console.log('Fetching signal from:', signalUrl);
+            
+            const response = await fetch(signalUrl);
             const data = await response.json();
+            
+            console.log('Signal API response:', data);
             
             if (data.success && data.signals && data.signals.length > 0) {
                 const signal = data.signals[0];
+                console.log('Using real signal:', signal);
                 this.updateSignalDisplay(signal);
             } else {
+                console.log('No signals found, showing fallback');
                 this.showFallbackSignal();
             }
         } catch (error) {
@@ -381,9 +389,11 @@ class HomePage {
         const signalElement = document.getElementById('featured-signal');
         if (!signalElement) return;
 
-        const direction = signal.signal?.direction || 'HOLD';
-        const confidence = signal.signal?.confidence || 85;
-        const strength = signal.signal?.strength || 0.7;
+        console.log('Updating signal display with:', signal);
+
+        const direction = signal.signal?.direction || signal.direction || 'HOLD';
+        const confidence = signal.signal?.confidence || signal.confidence || 85;
+        const strength = signal.signal?.strength || signal.strength || 0.7;
         
         // Update signal indicator
         const signalIndicator = signalElement.querySelector('.signal-indicator');
@@ -401,20 +411,26 @@ class HomePage {
             confidenceScore.textContent = `${Math.round(confidence)}%`;
         }
 
-        // Update signal metrics (mock data for demonstration)
-        const currentPrice = parseFloat(document.getElementById('featured-price')?.textContent || '1.0850');
-        const entry = direction === 'BUY' ? currentPrice - 0.0005 : currentPrice + 0.0005;
-        const target = direction === 'BUY' ? entry + 0.0075 : entry - 0.0075;
-        const stop = direction === 'BUY' ? entry - 0.0055 : entry + 0.0055;
-        const riskReward = Math.abs(target - entry) / Math.abs(entry - stop);
-
+        // Update signal metrics with REAL data from API
         const metrics = signalElement.querySelectorAll('.metric-value');
         if (metrics.length >= 4) {
-            metrics[0].textContent = entry.toFixed(4);
-            metrics[1].textContent = target.toFixed(4);
-            metrics[2].textContent = stop.toFixed(4);
+            // Use real signal data if available, otherwise calculate reasonable defaults
+            const entry = signal.entry_price || signal.signal?.entry_price || 
+                         (signal.current_price ? parseFloat(signal.current_price) : 1.0850);
+            const target = signal.target_price || signal.signal?.target_price || 
+                          (direction === 'BUY' ? entry + 0.0075 : entry - 0.0075);
+            const stop = signal.stop_loss || signal.signal?.stop_loss || 
+                        (direction === 'BUY' ? entry - 0.0055 : entry + 0.0055);
+            
+            const riskReward = Math.abs(target - entry) / Math.abs(entry - stop);
+
+            metrics[0].textContent = typeof entry === 'number' ? entry.toFixed(4) : entry;
+            metrics[1].textContent = typeof target === 'number' ? target.toFixed(4) : target;
+            metrics[2].textContent = typeof stop === 'number' ? stop.toFixed(4) : stop;
             metrics[3].textContent = `1:${riskReward.toFixed(2)}`;
         }
+
+        console.log('Signal display updated successfully');
     }
 
     async loadMarketStats() {
