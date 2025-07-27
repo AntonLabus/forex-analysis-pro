@@ -198,99 +198,147 @@ class HomePage {
                 return;
             }
 
-            // Check if Chart.js is available
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js is not loaded');
-                // Show fallback message
-                miniChartContainer.innerHTML = `
-                    <div class="chart-placeholder">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Chart library loading...</span>
-                    </div>
-                `;
-                return;
-            }
-
-            console.log('Chart.js is available, creating chart...');
+            // Add multiple attempts to load Chart.js with fallback
+            let chartAttempts = 0;
+            const maxAttempts = 3;
             
-            // Create a simple price chart using Chart.js
-            const canvas = document.createElement('canvas');
-            canvas.id = 'mini-chart-canvas';
-            canvas.width = 300;
-            canvas.height = 150;
-            
-            // Clear the placeholder and add canvas
-            miniChartContainer.innerHTML = '';
-            miniChartContainer.appendChild(canvas);
-
-            // Generate sample price data (in a real app, this would come from your API)
-            const sampleData = this.generateSampleChartData();
-            console.log('Sample data generated:', sampleData);
-            
-            // Create the chart
-            const chart = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels: sampleData.labels,
-                    datasets: [{
-                        label: 'EUR/USD',
-                        data: sampleData.prices,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            display: false
-                        },
-                        y: {
-                            display: false
-                        }
-                    },
-                    elements: {
-                        point: {
-                            radius: 0
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
+            const tryLoadChart = () => {
+                chartAttempts++;
+                console.log(`Chart loading attempt ${chartAttempts}/${maxAttempts}`);
+                
+                // Check if Chart.js is available
+                if (typeof Chart === 'undefined') {
+                    console.warn(`Chart.js not available on attempt ${chartAttempts}`);
+                    
+                    if (chartAttempts < maxAttempts) {
+                        // Try again after a delay
+                        setTimeout(tryLoadChart, 1000);
+                        return;
+                    } else {
+                        // After max attempts, show a visual fallback
+                        console.log('Max attempts reached, showing CSS-based chart fallback');
+                        this.showFallbackChart(miniChartContainer);
+                        return;
                     }
                 }
-            });
+
+                console.log('Chart.js is available, creating chart...');
+                this.createActualChart(miniChartContainer);
+            };
             
-            console.log('Chart created successfully:', chart);
+            // Start the first attempt
+            tryLoadChart();
             
         } catch (error) {
-            console.error('Error loading mini chart:', error);
-            // Show fallback chart placeholder
+            console.error('Error in loadMiniChart:', error);
             const miniChartContainer = document.getElementById('mini-chart');
             if (miniChartContainer) {
-                miniChartContainer.innerHTML = `
-                    <div class="chart-placeholder">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>Chart unavailable</span>
-                    </div>
-                `;
+                this.showFallbackChart(miniChartContainer);
             }
         }
+    }
+
+    showFallbackChart(container) {
+        // Create a CSS-based visual chart as fallback
+        console.log('Creating CSS fallback chart');
+        container.innerHTML = `
+            <div class="css-chart-container">
+                <div class="chart-header">
+                    <span class="chart-pair">EUR/USD</span>
+                    <span class="chart-price">1.0850</span>
+                    <span class="chart-change positive">+0.21%</span>
+                </div>
+                <div class="css-chart">
+                    <div class="chart-line">
+                        <div class="chart-point" style="left: 0%; bottom: 45%;"></div>
+                        <div class="chart-point" style="left: 12%; bottom: 48%;"></div>
+                        <div class="chart-point" style="left: 25%; bottom: 42%;"></div>
+                        <div class="chart-point" style="left: 37%; bottom: 55%;"></div>
+                        <div class="chart-point" style="left: 50%; bottom: 52%;"></div>
+                        <div class="chart-point" style="left: 62%; bottom: 58%;"></div>
+                        <div class="chart-point" style="left: 75%; bottom: 60%;"></div>
+                        <div class="chart-point" style="left: 87%; bottom: 65%;"></div>
+                        <div class="chart-point" style="left: 100%; bottom: 62%;"></div>
+                        <svg class="chart-svg">
+                            <polyline 
+                                points="0,55 12,52 25,58 37,45 50,48 62,42 75,40 87,35 100,38"
+                                fill="none" 
+                                stroke="rgba(96, 165, 250, 0.8)" 
+                                stroke-width="2"
+                                vector-effect="non-scaling-stroke">
+                            </polyline>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createActualChart(container) {
+        // Create a simple price chart using Chart.js
+        const canvas = document.createElement('canvas');
+        canvas.id = 'mini-chart-canvas';
+        canvas.width = 300;
+        canvas.height = 150;
+        
+        // Clear the placeholder and add canvas
+        container.innerHTML = '';
+        container.appendChild(canvas);
+
+        // Generate sample price data (in a real app, this would come from your API)
+        const sampleData = this.generateSampleChartData();
+        console.log('Sample data generated:', sampleData);
+        
+        // Create the chart
+        const chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: sampleData.labels,
+                datasets: [{
+                    label: 'EUR/USD',
+                    data: sampleData.prices,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        display: false
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 0
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+        
+        console.log('Chart created successfully:', chart);
     }
 
     generateSampleChartData() {
@@ -586,26 +634,38 @@ function closeTermsModal() {
 // Navigation functions
 function navigateToApp(tab = 'dashboard') {
     // Navigate to main app with specific tab
-    console.log('Navigating to app with tab:', tab);
-    window.location.href = `app.html#${tab}`;
+    console.log('navigateToApp called with tab:', tab);
+    console.log('Current location:', window.location.href);
+    const targetUrl = `app.html#${tab}`;
+    console.log('Navigating to:', targetUrl);
+    window.location.href = targetUrl;
 }
 
 function navigateToAnalysis(pair = 'EURUSD') {
     // Navigate to analysis page with specific pair
-    console.log('Navigating to analysis with pair:', pair);
-    window.location.href = `app.html#analysis?pair=${pair}`;
+    console.log('navigateToAnalysis called with pair:', pair);
+    console.log('Current location:', window.location.href);
+    const targetUrl = `app.html#analysis?pair=${pair}`;
+    console.log('Navigating to:', targetUrl);
+    window.location.href = targetUrl;
 }
 
 function navigateToChart(pair = 'EURUSD') {
     // Navigate to analysis page with chart focus
-    console.log('Navigating to chart with pair:', pair);
-    window.location.href = `app.html#analysis?pair=${pair}&chart=true`;
+    console.log('navigateToChart called with pair:', pair);
+    console.log('Current location:', window.location.href);
+    const targetUrl = `app.html#analysis?pair=${pair}&chart=true`;
+    console.log('Navigating to:', targetUrl);
+    window.location.href = targetUrl;
 }
 
 function navigateToSignals() {
     // Navigate to signals page
-    console.log('Navigating to signals');
-    window.location.href = `app.html#signals`;
+    console.log('navigateToSignals called');
+    console.log('Current location:', window.location.href);
+    const targetUrl = 'app.html#signals';
+    console.log('Navigating to:', targetUrl);
+    window.location.href = targetUrl;
 }
 
 // Initialize when page loads
