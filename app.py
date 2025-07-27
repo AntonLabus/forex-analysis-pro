@@ -1,22 +1,6 @@
 """
 Forex Analysis Pro - Main Flask Application
-A comtry:
-    from backend.signal_generator import SignalGenerator
-except ImportError:
-    # Create a dummy signal generator
-    class SignalGenerator:
-        def generate_signal(self, pair, technical_data, fundamental_data):
-            return {
-                "pair": pair,
-                "signal": {"direction": "HOLD", "confidence": 50.0, "strength": 0.5},
-                "timestamp": datetime.now().isoformat()
-            }
-
-# Import rate limiter
-try:
-    from backend.rate_limiter import rate_limiter
-except ImportError:
-    rate_limiter = Noneforex analysis platform with technical and fundamental analysis
+A comprehensive forex analysis platform with technical and fundamental analysis
 """
 
 from flask import Flask, render_template, jsonify, request
@@ -47,7 +31,24 @@ try:
 except ImportError:
     from backend.data_fetcher_nodeps import DataFetcher
 
-# Try to import full technical analysis, fallback to simple version
+# Try to import signal generator
+try:
+    from backend.signal_generator import SignalGenerator
+except ImportError:
+    # Create a dummy signal generator
+    class SignalGenerator:
+        def generate_signal(self, pair, technical_data, fundamental_data):
+            return {
+                "pair": pair,
+                "signal": {"direction": "HOLD", "confidence": 50.0, "strength": 0.5},
+                "timestamp": datetime.now().isoformat()
+            }
+
+# Import rate limiter
+try:
+    from backend.rate_limiter import rate_limiter
+except ImportError:
+    rate_limiter = None
 try:
     if PANDAS_AVAILABLE:
         from backend.technical_analysis import TechnicalAnalysis

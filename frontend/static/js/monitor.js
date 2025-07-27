@@ -132,13 +132,25 @@ class SystemMonitor {
 
             if (rateLimitsResponse.ok) {
                 this.rateLimitData = await rateLimitsResponse.json();
+                console.log('Rate limit data:', this.rateLimitData); // Debug log
                 this.updateRateLimitsDisplay();
+            } else {
+                console.error('Rate limits response not ok:', rateLimitsResponse.status);
+                document.getElementById('rate-limits-status').innerHTML = 
+                    '<div class="error-state">❌ Failed to load rate limits</div>';
             }
 
             if (healthResponse.ok) {
                 this.healthData = await healthResponse.json();
+                console.log('Health data:', this.healthData); // Debug log
                 this.updateHealthDisplay();
                 this.updateRecommendationsDisplay();
+            } else {
+                console.error('Health response not ok:', healthResponse.status);
+                document.getElementById('system-health-status').innerHTML = 
+                    '<div class="error-state">❌ Failed to load health data</div>';
+                document.getElementById('system-recommendations').innerHTML = 
+                    '<div class="error-state">❌ Failed to load recommendations</div>';
             }
 
             // Update monitor toggle button color based on health
@@ -152,12 +164,25 @@ class SystemMonitor {
 
     updateRateLimitsDisplay() {
         const container = document.getElementById('rate-limits-status');
-        if (!this.rateLimitData) return;
+        if (!this.rateLimitData || !this.rateLimitData.success) {
+            container.innerHTML = '<div class="error-state">❌ Failed to load rate limits</div>';
+            return;
+        }
 
-        const html = Object.entries(this.rateLimitData.limits || {}).map(([api, data]) => {
-            const usagePercent = (data.current / data.limit) * 100;
+        const data = this.rateLimitData.data;
+        const usageStats = data.usage_stats || {};
+        
+        if (Object.keys(usageStats).length === 0) {
+            container.innerHTML = '<div class="no-data">No rate limit data available</div>';
+            return;
+        }
+
+        const html = Object.entries(usageStats).map(([api, stats]) => {
+            const current = stats.current || 0;
+            const limit = stats.limit || 1;
+            const usagePercent = (current / limit) * 100;
             const statusClass = this.getRateLimitStatusClass(usagePercent);
-            const timeRemaining = this.formatTimeRemaining(data.reset_time);
+            const resetTime = stats.reset_time || 'Unknown';
 
             return `
                 <div class="rate-limit-item ${statusClass}">
@@ -165,48 +190,54 @@ class SystemMonitor {
                     <div class="usage-bar">
                         <div class="usage-fill" style="width: ${usagePercent}%"></div>
                     </div>
-                    <div class="usage-text">${data.current}/${data.limit}</div>
-                    <div class="reset-time">Resets in ${timeRemaining}</div>
+                    <div class="usage-text">${current}/${limit}</div>
+                    <div class="reset-time">Resets: ${resetTime}</div>
                 </div>
             `;
         }).join('');
 
-        container.innerHTML = html || '<div class="no-data">No rate limit data available</div>';
+        container.innerHTML = html;
     }
 
     updateHealthDisplay() {
         const container = document.getElementById('system-health-status');
-        if (!this.healthData) return;
+        if (!this.healthData || !this.healthData.success) {
+            container.innerHTML = '<div class="error-state">❌ Failed to load health data</div>';
+            return;
+        }
 
-        const health = this.healthData;
-        const overallStatus = this.getHealthStatusClass(health.health_score);
+        const data = this.healthData.data;
+        const health = data.health || {};
+        const system = data.system || {};
+        const healthScore = health.health_score || 0;
+        const overallStatus = this.getHealthStatusClass(healthScore);
 
         const html = `
             <div class="health-overview ${overallStatus}">
                 <div class="health-score">
-                    <span class="score-value">${health.health_score}</span>
+                    <span class="score-value">${healthScore}</span>
                     <span class="score-label">Health Score</span>
                 </div>
                 <div class="health-status">
-                    <span class="status-label">${this.getHealthStatusLabel(health.health_score)}</span>
+                    <span class="status-label">${this.getHealthStatusLabel(healthScore)}</span>
                 </div>
             </div>
             <div class="health-metrics">
                 <div class="metric">
                     <span class="metric-label">Uptime</span>
-                    <span class="metric-value">${this.formatUptime(health.uptime_seconds)}</span>
+                    <span class="metric-value">${this.formatUptime(system.uptime || 0)}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Version</span>
+                    <span class="metric-value">${system.version || 'Unknown'}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">Total Requests</span>
-                    <span class="metric-value">${health.total_requests.toLocaleString()}</span>
+                    <span class="metric-value">${(health.total_requests || 0).toLocaleString()}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">Error Rate</span>
-                    <span class="metric-value">${health.error_rate.toFixed(2)}%</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Avg Response</span>
-                    <span class="metric-value">${health.avg_response_time}ms</span>
+                    <span class="metric-value">${(health.error_rate || 0).toFixed(2)}%</span>
                 </div>
             </div>
         `;
@@ -216,9 +247,15 @@ class SystemMonitor {
 
     updateRecommendationsDisplay() {
         const container = document.getElementById('system-recommendations');
-        if (!this.healthData || !this.healthData.recommendations) return;
+        if (!this.healthData || !this.healthData.success) {
+            container.innerHTML = '<div class="error-state">❌ Failed to load recommendations</div>';
+            return;
+        }
 
-        const recommendations = this.healthData.recommendations;
+        const data = this.healthData.data;
+        const health = data.health || {};
+        const recommendations = health.recommendations || [];
+        
         if (recommendations.length === 0) {
             container.innerHTML = '<div class="no-recommendations">✅ All systems operating optimally</div>';
             return;
