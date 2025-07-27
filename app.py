@@ -148,12 +148,80 @@ def index():
     """Main dashboard page"""
     return render_template('index.html')
 
+@app.route('/api/forex/test-price/<pair>')
+def test_current_price(pair):
+    """Test endpoint to get real current price and debug data fetching"""
+    try:
+        # Clear cache for this pair to force fresh data
+        cache_key = f"current_price_{pair}"
+        if hasattr(data_fetcher, 'cache') and cache_key in data_fetcher.cache:
+            del data_fetcher.cache[cache_key]
+        if hasattr(data_fetcher, 'cache_expiry') and cache_key in data_fetcher.cache_expiry:
+            del data_fetcher.cache_expiry[cache_key]
+        
+        # Try to get fresh current price
+        current_price = data_fetcher.get_current_price(pair)
+        
+        # Also test free APIs directly
+        import requests
+        test_results = {}
+        
+        # Test ExchangeRate API
+        try:
+            from_symbol = pair[:3]
+            to_symbol = pair[3:]
+            url = f"https://api.exchangerate-api.com/v4/latest/{from_symbol}"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if 'rates' in data and to_symbol in data['rates']:
+                    test_results['exchangerate_api'] = float(data['rates'][to_symbol])
+        except Exception as e:
+            test_results['exchangerate_api_error'] = str(e)
+        
+        # Test ExchangeRate.host
+        try:
+            url = f"https://api.exchangerate.host/latest?base={from_symbol}&symbols={to_symbol}"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if 'rates' in data and to_symbol in data['rates']:
+                    test_results['exchangerate_host'] = float(data['rates'][to_symbol])
+        except Exception as e:
+            test_results['exchangerate_host_error'] = str(e)
+        
+        return jsonify({
+            'success': True,
+            'pair': pair,
+            'data_fetcher_price': current_price,
+            'test_apis': test_results,
+            'timestamp': datetime.now().isoformat(),
+            'note': 'This endpoint clears cache and tests real APIs'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing price for {pair}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'pair': pair,
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 @app.route('/api/forex/pairs')
 def get_forex_pairs():
     """Get all available forex pairs with real-time data - optimized for fast response"""
     try:
         pairs_data = []
         successful_pairs = 0
+        
+        # Check if force refresh is requested
+        force_refresh = request.args.get('force_refresh', 'false').lower() == 'true'
+        if force_refresh:
+            logger.info("Force refresh requested - clearing cache")
+            # Clear data fetcher cache
+            data_fetcher.cache.clear()
+            data_fetcher.cache_expiry.clear()
         
         logger.info("Fetching forex pairs data (optimized)...")
         
@@ -762,10 +830,10 @@ def generate_demo_signals(pair: str) -> Dict[str, Any]:
     confidence = random.uniform(45, 85)  # Random confidence between 45-85%
     strength = random.uniform(0.3, 0.8) if signal_type != 'HOLD' else random.uniform(0.1, 0.4)
     
-    # Demo price based on typical forex rates
+    # Demo price based on current market rates (updated July 27, 2025)
     demo_prices = {
-        'EURUSD': 1.0800, 'GBPUSD': 1.2800, 'USDJPY': 148.50, 'USDCHF': 0.8900,
-        'AUDUSD': 0.6700, 'USDCAD': 1.3600, 'NZDUSD': 0.5950, 'EURGBP': 0.8450
+        'EURUSD': 1.1744, 'GBPUSD': 1.2980, 'USDJPY': 154.25, 'USDCHF': 0.8650,
+        'AUDUSD': 0.6580, 'USDCAD': 1.3850, 'NZDUSD': 0.5840, 'EURGBP': 0.8560
     }
     demo_price = demo_prices.get(pair, 1.0000)
     
