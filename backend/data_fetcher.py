@@ -29,10 +29,10 @@ class DataFetcher:
         self.last_request_time = {}  # Track last request time per pair
         self.rate_limit_delay = 1.0  # Start with 1 second between requests
         
-        # Rate limiting: 150 requests per 10 seconds
+        # Rate limiting: 10 requests per 1 second
         self.request_timestamps = []  # Track request timestamps
-        self.max_requests_per_window = 150
-        self.rate_limit_window = 10  # 10 seconds
+        self.max_requests_per_window = 10
+        self.rate_limit_window = 1  # 1 second
         
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
@@ -67,7 +67,7 @@ class DataFetcher:
     
     def _check_rate_limit(self) -> bool:
         """
-        Check if we can make a request based on rate limiting (150 requests per 10 seconds)
+        Check if we can make a request based on rate limiting (10 requests per 1 second)
         Returns True if request is allowed, False if rate limited
         """
         import time
@@ -91,7 +91,7 @@ class DataFetcher:
         
         # Add current timestamp and allow request
         self.request_timestamps.append(current_time)
-        logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 10s")
+        logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 1s")
         return True
     
     def _wait_for_rate_limit(self) -> None:
@@ -454,7 +454,7 @@ class DataFetcher:
                 logger.info(f"Returning cached data for {pair}")
                 return self.cache[cache_key]
             
-            # Rate limiting: wait if necessary to respect 150 requests per 10 seconds limit
+            # Rate limiting: wait if necessary to respect 10 requests per 1 second limit
             if not self._check_rate_limit():
                 self._wait_for_rate_limit()
             

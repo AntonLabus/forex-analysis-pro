@@ -25,10 +25,10 @@ class DataFetcher:
         self.cache = {}
         self.cache_expiry = {}
         
-        # Rate limiting: 150 requests per 10 seconds
+        # Rate limiting: 10 requests per 1 second
         self.request_timestamps = []  # Track request timestamps
-        self.max_requests_per_window = 150
-        self.rate_limit_window = 10  # 10 seconds
+        self.max_requests_per_window = 10
+        self.rate_limit_window = 1  # 1 second
         
         # Yahoo Finance forex pair mapping
         self.yahoo_pairs = {
@@ -49,7 +49,7 @@ class DataFetcher:
     
     def _check_rate_limit(self) -> bool:
         """
-        Check if we can make a request based on rate limiting (150 requests per 10 seconds)
+        Check if we can make a request based on rate limiting (10 requests per 1 second)
         Returns True if request is allowed, False if rate limited
         """
         current_time = time.time()
@@ -71,7 +71,7 @@ class DataFetcher:
         
         # Add current timestamp and allow request
         self.request_timestamps.append(current_time)
-        logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 10s")
+        logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 1s")
         return True
     
     def _wait_for_rate_limit(self) -> None:
@@ -347,8 +347,8 @@ class DataFetcher:
                 if price_data:
                     pairs_data.append(price_data)
                     
-                # Reduced delay since we have higher rate limits now (150/10s)
-                time.sleep(0.03)  # 30ms delay for even better performance
+                # Delay to stay within rate limit (10 requests per second)
+                time.sleep(0.1)  # 100ms delay to ensure 10 requests/second max
                 
             except Exception as e:
                 logger.error(f"Error fetching data for {pair}: {str(e)}")
