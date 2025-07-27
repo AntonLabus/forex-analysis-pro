@@ -19,20 +19,42 @@ logger = logging.getLogger(__name__)
 
 class DataFetcher:
     """
-    Fetches forex data from multiple sources with fallback mechanisms
+    Fetches forex data from multiple sources with advanced rate limiting and fallback mechanisms
     """
     
     def __init__(self):
         self.alpha_vantage_key = os.getenv('ALPHA_VANTAGE_API_KEY')
         self.cache = {}
         self.cache_expiry = {}
-        self.last_request_time = {}  # Track last request time per pair
-        self.rate_limit_delay = 1.0  # Start with 1 second between requests
         
-        # Rate limiting: 10 requests per 1 second
-        self.request_timestamps = []  # Track request timestamps
-        self.max_requests_per_window = 10
-        self.rate_limit_window = 1  # 1 second
+        # Enhanced rate limiting with per-API tracking
+        self.api_request_counts = {
+            'yahoo_finance': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'alpha_vantage': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'exchangerate_api': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'exchangerate_host': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'fawaz_currency': {'hourly': 0, 'daily': 0, 'last_reset': time.time()}
+        }
+        
+        # Request queue for rate limiting
+        self.request_queue = []
+        self.queue_processing = False
+        
+        # Smart throttling
+        self.throttle_delays = {
+            'yahoo_finance': 1.0,
+            'alpha_vantage': 2.0,  # More conservative for paid API
+            'exchangerate_api': 1.5,
+            'exchangerate_host': 0.5,
+            'fawaz_currency': 0.2
+        }
+        
+        # Legacy rate limiting (keep for backward compatibility)
+        self.last_request_time = {}
+        self.rate_limit_delay = 1.0
+        self.request_timestamps = []
+        self.max_requests_per_window = 8  # Reduced from 10
+        self.rate_limit_window = 1
         
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
@@ -64,6 +86,104 @@ class DataFetcher:
                 'parser': self._parse_fawazahmed0
             }
         ]
+    
+    def _reset_api_counters(self, api_name: str) -> None:
+        """Reset API counters if time windows have passed"""
+        current_time = time.time()
+        counter = self.api_request_counts[api_name]
+        
+        # Reset hourly counter (3600 seconds)
+        if current_time - counter['last_reset'] >= 3600:
+            counter['hourly'] = 0
+            counter['last_reset'] = current_time
+            
+        # Reset daily counter (86400 seconds)
+        if current_time - counter['last_reset'] >= 86400:
+            counter['daily'] = 0
+    
+    def _can_make_request(self, api_name: str) -> bool:
+        """
+        Check if we can make a request to a specific API based on its limits
+        """
+        try:
+            import config
+        except ImportError:
+            # Fallback to default limits if config not available
+            config = type('Config', (), {
+                'API_RATE_LIMITS': {'yahoo_finance': 100, 'alpha_vantage': 20},
+                'ALPHA_VANTAGE_DAILY_LIMIT': 20
+            })()
+        
+        self._reset_api_counters(api_name)
+        counter = self.api_request_counts[api_name]
+        
+        # Get API-specific limits
+        api_limits = getattr(config, 'API_RATE_LIMITS', {})
+        hourly_limit = api_limits.get(api_name, 100)  # Default 100/hour
+        
+        # Special handling for Alpha Vantage daily limit
+        if api_name == 'alpha_vantage':
+            daily_limit = getattr(config, 'ALPHA_VANTAGE_DAILY_LIMIT', 20)
+            if counter['daily'] >= daily_limit:
+                logger.warning(f"Alpha Vantage daily limit ({daily_limit}) reached")
+                return False
+        
+        # Check hourly limit
+        if counter['hourly'] >= hourly_limit:
+            logger.warning(f"{api_name} hourly limit ({hourly_limit}) reached")
+            return False
+        
+        return True
+    
+    def _record_api_request(self, api_name: str) -> None:
+        """Record that we made a request to an API"""
+        if api_name in self.api_request_counts:
+            counter = self.api_request_counts[api_name]
+            counter['hourly'] += 1
+            counter['daily'] += 1
+            
+            # Apply smart throttling delay
+            delay = self.throttle_delays.get(api_name, 1.0)
+            time.sleep(delay)
+            
+            logger.debug(f"{api_name} request recorded. Hourly: {counter['hourly']}, Daily: {counter['daily']}")
+    
+    def _get_cache_key(self, pair: str, data_type: str = 'price', timeframe: Optional[str] = None) -> str:
+        """Generate cache key for different types of data"""
+        if timeframe:
+            return f"{data_type}_{pair}_{timeframe}"
+        return f"{data_type}_{pair}"
+    
+    def _is_cache_valid(self, cache_key: str, cache_timeout: Optional[int] = None) -> bool:
+        """Check if cached data is still valid"""
+        try:
+            import config
+            default_timeout = getattr(config, 'CACHE_TIMEOUT_SECONDS', 900)
+        except ImportError:
+            default_timeout = 900
+        
+        if cache_key not in self.cache or cache_key not in self.cache_expiry:
+            return False
+        
+        if cache_timeout is None:
+            cache_timeout = default_timeout
+        
+        return time.time() < self.cache_expiry[cache_key]
+    
+    def _set_cache(self, cache_key: str, data: Any, cache_timeout: Optional[int] = None) -> None:
+        """Set cache with appropriate timeout"""
+        try:
+            import config
+            default_timeout = getattr(config, 'CACHE_TIMEOUT_SECONDS', 900)
+        except ImportError:
+            default_timeout = 900
+        
+        timeout = cache_timeout if cache_timeout is not None else default_timeout
+        
+        self.cache[cache_key] = data
+        self.cache_expiry[cache_key] = time.time() + timeout
+        
+        logger.debug(f"Cached {cache_key} for {timeout} seconds")
     
     def _check_rate_limit(self) -> bool:
         """

@@ -1,6 +1,22 @@
 """
 Forex Analysis Pro - Main Flask Application
-A comprehensive forex analysis platform with technical and fundamental analysis
+A comtry:
+    from backend.signal_generator import SignalGenerator
+except ImportError:
+    # Create a dummy signal generator
+    class SignalGenerator:
+        def generate_signal(self, pair, technical_data, fundamental_data):
+            return {
+                "pair": pair,
+                "signal": {"direction": "HOLD", "confidence": 50.0, "strength": 0.5},
+                "timestamp": datetime.now().isoformat()
+            }
+
+# Import rate limiter
+try:
+    from backend.rate_limiter import rate_limiter
+except ImportError:
+    rate_limiter = Noneforex analysis platform with technical and fundamental analysis
 """
 
 from flask import Flask, render_template, jsonify, request
@@ -87,6 +103,9 @@ app = Flask(__name__,
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
+
+# Store start time for uptime calculation
+app.start_time = time.time()
 
 # Initialize extensions
 CORS(app)
@@ -543,6 +562,8 @@ def generate_basic_signals(pair: str, current_price: float) -> Dict[str, Any]:
         fund_confidence = confidence * random.uniform(0.2, 0.5)
         
         return {
+            'pair': pair,
+            'timestamp': datetime.now().isoformat(),
             'signal': {
                 'type': signal_type,
                 'strength': round(signal_strength, 2),
@@ -590,6 +611,8 @@ def generate_basic_signals(pair: str, current_price: float) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error generating basic signals for {pair}: {e}")
         return {
+            'pair': pair,
+            'timestamp': datetime.now().isoformat(),
             'signal': {
                 'type': 'HOLD',
                 'strength': 0.0,
@@ -798,6 +821,66 @@ def handle_subscribe_pair(data):
         logger.info(f'Client subscribed to {pair}')
         # In a real implementation, you would add the client to a subscription list
         emit('subscription_confirmed', {'pair': pair})
+
+@app.route('/api/system/rate-limits')
+def get_rate_limits():
+    """Get current rate limiting status and statistics"""
+    try:
+        from backend.rate_limiter import rate_limiter
+        
+        usage_stats = rate_limiter.get_usage_stats()
+        health_status = rate_limiter.get_health_status()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'usage_stats': usage_stats,
+                'health_status': health_status,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting rate limits: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/system/health')
+def get_system_health():
+    """Get system health overview"""
+    try:
+        from backend.rate_limiter import rate_limiter
+        
+        health_status = rate_limiter.get_health_status()
+        
+        # Add additional system metrics
+        start_time = getattr(app, 'start_time', time.time())
+        system_info = {
+            'version': '1.0.0',
+            'uptime': time.time() - start_time,
+            'pandas_available': PANDAS_AVAILABLE,
+            'apis_configured': {
+                'alpha_vantage': bool(os.getenv('ALPHA_VANTAGE_API_KEY')),
+                'news_api': bool(os.getenv('NEWS_API_KEY')),
+                'economic_calendar': bool(os.getenv('ECONOMIC_CALENDAR_API_KEY'))
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'health': health_status,
+                'system': system_info,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting system health: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 def broadcast_price_updates():
     """Background task to broadcast real-time price updates"""

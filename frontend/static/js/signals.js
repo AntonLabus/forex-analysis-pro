@@ -13,29 +13,112 @@ class SignalManager {
             direction: '',
             confidence: 0
         };
+        
+        // Enhanced request management
+        this.requestQueue = [];
+        this.isProcessingQueue = false;
+        this.maxConcurrentRequests = 3;
+        this.activeRequests = 0;
+        this.lastRequestTime = 0;
+        this.minRequestInterval = 1000; // 1 second between requests
+        
+        // Request priority system
+        this.priorityPairs = CONFIG.HIGH_PRIORITY_PAIRS || ['EURUSD', 'GBPUSD', 'USDJPY'];
+        
+        // Cache for signals to reduce API calls
+        this.signalCache = new Map();
+        this.cacheExpiry = new Map();
+        this.defaultCacheTime = 5 * 60 * 1000; // 5 minutes
     }
 
     /**
-     * Fetch signals for a specific pair or all pairs
+     * Check if we have valid cached signal data
+     * @param {string} pair - Currency pair
+     * @param {string} timeframe - Timeframe
+     * @returns {Object|null} Cached signal data or null
+     */
+    getCachedSignal(pair, timeframe) {
+        const cacheKey = `${pair}_${timeframe}`;
+        const cached = this.signalCache.get(cacheKey);
+        const expiry = this.cacheExpiry.get(cacheKey);
+        
+        if (cached && expiry && Date.now() < expiry) {
+            console.log(`Using cached signal for ${pair} ${timeframe}`);
+            return cached;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Cache signal data
+     * @param {string} pair - Currency pair
+     * @param {string} timeframe - Timeframe
+     * @param {Object} data - Signal data
+     */
+    setCachedSignal(pair, timeframe, data) {
+        const cacheKey = `${pair}_${timeframe}`;
+        this.signalCache.set(cacheKey, data);
+        this.cacheExpiry.set(cacheKey, Date.now() + this.defaultCacheTime);
+        console.log(`Cached signal for ${pair} ${timeframe}`);
+    }
+    
+    /**
+     * Smart rate limiting - wait if necessary
+     */
+    async waitForRateLimit() {
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        
+        if (timeSinceLastRequest < this.minRequestInterval) {
+            const waitTime = this.minRequestInterval - timeSinceLastRequest;
+            console.log(`Rate limiting: waiting ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.lastRequestTime = Date.now();
+    }
+
+    /**
+     * Fetch signals for a specific pair or all pairs with enhanced rate limiting
      * @param {string} pair - Currency pair (optional)
      * @returns {Promise} Signal data
      */
     async fetchSignals(pair = '') {
         try {
+            // Check cache first for single pair requests
+            if (pair) {
+                const cached = this.getCachedSignal(pair, this.currentTimeframe);
+                if (cached) {
+                    this.signals.set(pair, cached);
+                    this.updateSignalDisplay();
+                    return { success: true, signals: cached };
+                }
+            }
+            
+            // Rate limiting
+            await this.waitForRateLimit();
+            
             const url = pair ? 
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}` :
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all`;
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?timeframe=${this.currentTimeframe}` :
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?timeframe=${this.currentTimeframe}`;
             
             const response = await Utils.request(url);
             
             if (response.success) {
                 if (pair) {
+                    // Cache single pair response
+                    this.setCachedSignal(pair, this.currentTimeframe, response.signals);
                     this.signals.set(pair, response.signals);
                 } else {
                     // Handle multiple pairs - response.signals is an object with pair names as keys
                     for (const [pairName, signalData] of Object.entries(response.signals || {})) {
                         // Add the pair name to the signal data
                         signalData.pair = pairName;
+                        signalData.timeframe = this.currentTimeframe;
+                        
+                        // Cache each pair's signal
+                        this.setCachedSignal(pairName, this.currentTimeframe, signalData);
                         this.signals.set(pairName, signalData);
                     }
                 }
@@ -53,26 +136,116 @@ class SignalManager {
     }
 
     /**
-     * Fetch signals for all currency pairs
+     * Fetch signals for all currency pairs with smart batching and priority
      * @returns {Promise} All signals data
      */
     async fetchAllSignals() {
-        const promises = CONFIG.CURRENCY_PAIRS.map(pair => 
-            this.fetchSignalForPair(pair.symbol).catch(error => {
-                console.warn(`Failed to fetch signal for ${pair.symbol}:`, error);
-                return null;
-            })
-        );
-
         try {
-            const results = await Promise.allSettled(promises);
-            this.updateSignalDisplay();
-            this.updateQuickStats();
-            return results;
+            // Check if we can use batch API endpoint
+            const cached = this.getCachedSignal('ALL', this.currentTimeframe);
+            if (cached) {
+                console.log('Using cached batch signals');
+                // Process cached batch data
+                for (const [pairName, signalData] of Object.entries(cached)) {
+                    signalData.pair = pairName;
+                    signalData.timeframe = this.currentTimeframe;
+                    this.signals.set(pairName, signalData);
+                }
+                this.updateSignalDisplay();
+                this.updateQuickStats();
+                return { success: true, signals: cached };
+            }
+            
+            // Use batch endpoint for better efficiency
+            await this.waitForRateLimit();
+            
+            const url = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?timeframe=${this.currentTimeframe}`;
+            const response = await Utils.request(url);
+            
+            if (response.success && response.signals) {
+                // Cache the batch result
+                this.setCachedSignal('ALL', this.currentTimeframe, response.signals);
+                
+                // Process batch response
+                for (const [pairName, signalData] of Object.entries(response.signals)) {
+                    signalData.pair = pairName;
+                    signalData.timeframe = this.currentTimeframe;
+                    this.signals.set(pairName, signalData);
+                    
+                    // Also cache individual pairs
+                    this.setCachedSignal(pairName, this.currentTimeframe, signalData);
+                }
+                
+                this.updateSignalDisplay();
+                this.updateQuickStats();
+                return response;
+            } else {
+                // Fallback to individual requests with priority ordering
+                return await this.fetchSignalsWithPriority();
+            }
         } catch (error) {
             console.error('Error fetching all signals:', error);
             Utils.showNotification('Failed to fetch some signals', 'warning');
+            
+            // Fallback to individual requests
+            return await this.fetchSignalsWithPriority();
         }
+    }
+    
+    /**
+     * Fetch signals with priority ordering and rate limiting
+     * @returns {Promise} Signals data
+     */
+    async fetchSignalsWithPriority() {
+        const allPairs = CONFIG.CURRENCY_PAIRS.map(pair => pair.symbol);
+        
+        // Sort pairs by priority
+        const prioritizedPairs = [
+            ...this.priorityPairs.filter(pair => allPairs.includes(pair)),
+            ...allPairs.filter(pair => !this.priorityPairs.includes(pair))
+        ];
+        
+        const results = [];
+        let successCount = 0;
+        
+        for (const pair of prioritizedPairs) {
+            try {
+                // Check cache first
+                const cached = this.getCachedSignal(pair, this.currentTimeframe);
+                if (cached) {
+                    this.signals.set(pair, cached);
+                    results.push({ status: 'fulfilled', value: cached });
+                    successCount++;
+                    continue;
+                }
+                
+                // Rate limiting between individual requests
+                await this.waitForRateLimit();
+                
+                const signalData = await this.fetchSignalForPair(pair);
+                if (signalData) {
+                    results.push({ status: 'fulfilled', value: signalData });
+                    successCount++;
+                } else {
+                    results.push({ status: 'rejected', reason: `Failed to fetch ${pair}` });
+                }
+                
+                // Give priority pairs more immediate processing
+                if (!this.priorityPairs.includes(pair)) {
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Extra delay for low priority
+                }
+                
+            } catch (error) {
+                console.warn(`Failed to fetch signal for ${pair}:`, error);
+                results.push({ status: 'rejected', reason: error.message });
+            }
+        }
+        
+        console.log(`Fetched ${successCount}/${prioritizedPairs.length} signals successfully`);
+        
+        this.updateSignalDisplay();
+        this.updateQuickStats();
+        return results;
     }
 
     /**

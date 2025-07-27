@@ -17,12 +17,34 @@ ALPHA_VANTAGE_API_KEY = ''  # Optional: Get from https://www.alphavantage.co/sup
 NEWS_API_KEY = ''           # Optional: Get from https://newsapi.org/
 ECONOMIC_CALENDAR_API_KEY = ''  # Optional: For economic calendar data
 
+# Enhanced Rate Limiting Configuration
+RATE_LIMIT_PER_MINUTE = 60
+DAILY_REQUEST_LIMIT = 5000      # Conservative daily limit across all APIs
+HOURLY_REQUEST_LIMIT = 300      # Conservative hourly limit
+ALPHA_VANTAGE_DAILY_LIMIT = 20  # Leave buffer for free tier (25 max)
+YAHOO_FINANCE_HOURLY_LIMIT = 100  # Conservative Yahoo Finance limit
+
+# API-Specific Rate Limits (requests per hour)
+API_RATE_LIMITS = {
+    'yahoo_finance': 100,
+    'alpha_vantage': 20,      # Daily limit spread across 24 hours
+    'exchangerate_api': 50,   # Conservative for 1500/month limit
+    'exchangerate_host': 500, # High tolerance
+    'fawaz_currency': 1000    # GitHub CDN, very high tolerance
+}
+
 # Data Source Configuration
 PRIMARY_DATA_SOURCE = 'yahoo'  # 'yahoo' or 'alphavantage'
 ENABLE_CACHING = True
-CACHE_TIMEOUT_SECONDS = 300  # 5 minutes
+CACHE_TIMEOUT_SECONDS = 900  # 15 minutes (increased from 5 minutes)
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 30
+
+# Smart Caching Configuration
+PRICE_CACHE_TIMEOUT = 300       # 5 minutes for current prices
+HISTORICAL_CACHE_TIMEOUT = 3600  # 1 hour for historical data
+SIGNAL_CACHE_TIMEOUT = 900      # 15 minutes for signals
+TECHNICAL_CACHE_TIMEOUT = 600   # 10 minutes for technical analysis
 
 # Analysis Configuration
 TECHNICAL_ANALYSIS_ENABLED = True
@@ -43,10 +65,21 @@ SIGNAL_CONFIDENCE_THRESHOLD = 60  # Minimum confidence percentage to show signal
 TECHNICAL_WEIGHT = 0.6  # Technical analysis weight in combined signals
 FUNDAMENTAL_WEIGHT = 0.4  # Fundamental analysis weight in combined signals
 
-# Update Intervals (seconds)
-PRICE_UPDATE_INTERVAL = 5
-SIGNAL_UPDATE_INTERVAL = 60
-PORTFOLIO_UPDATE_INTERVAL = 300
+# Update Intervals (seconds) - Optimized for API limits
+PRICE_UPDATE_INTERVAL = 30     # Increased from 5 seconds
+SIGNAL_UPDATE_INTERVAL = 300   # Increased from 60 seconds (5 minutes)
+PORTFOLIO_UPDATE_INTERVAL = 600 # Increased from 300 seconds (10 minutes)
+
+# Request Priority System
+HIGH_PRIORITY_PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY']  # Most important pairs
+MEDIUM_PRIORITY_PAIRS = ['AUDUSD', 'USDCHF', 'USDCAD']
+LOW_PRIORITY_PAIRS = ['NZDUSD', 'EURGBP']
+
+# Rate Limiting Strategies
+ENABLE_SMART_THROTTLING = True  # Automatically adjust request frequency
+ENABLE_REQUEST_QUEUING = True   # Queue requests when rate limited
+MAX_QUEUE_SIZE = 100           # Maximum queued requests
+QUEUE_TIMEOUT = 300            # 5 minutes queue timeout
 
 # UI Configuration
 DEFAULT_THEME = 'dark'  # 'dark' or 'light'
