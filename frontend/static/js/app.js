@@ -31,6 +31,9 @@ class ForexAnalysisApp {
             // Initialize WebSocket connection
             this.initWebSocket();
             
+            // Handle URL hash navigation
+            this.handleUrlHash();
+            
             // Load initial data
             await this.loadInitialData();
             
@@ -791,6 +794,51 @@ class ForexAnalysisApp {
 
         // Load tab-specific data
         this.loadTabData(tabName);
+    }
+
+    /**
+     * Handle URL hash navigation for deep linking
+     */
+    handleUrlHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+
+        // Remove the # and parse the hash
+        const hashContent = hash.substring(1);
+        const [tab, queryString] = hashContent.split('?');
+        
+        // Parse query parameters
+        const params = new URLSearchParams(queryString || '');
+        
+        // Switch to the appropriate tab
+        if (tab && ['dashboard', 'analysis', 'signals'].includes(tab)) {
+            this.switchTab(tab);
+            
+            // Handle specific parameters for analysis tab
+            if (tab === 'analysis') {
+                const pair = params.get('pair');
+                const showChart = params.get('chart');
+                
+                if (pair) {
+                    // Set the selected pair in the dropdown
+                    const pairSelect = document.getElementById('analysis-pair');
+                    if (pairSelect) {
+                        pairSelect.value = pair;
+                    }
+                }
+                
+                // If chart parameter is present, we could trigger chart loading
+                if (showChart === 'true') {
+                    // Add a small delay to ensure the tab is fully loaded
+                    setTimeout(() => {
+                        const analyzeBtn = document.getElementById('analyze-btn');
+                        if (analyzeBtn) {
+                            analyzeBtn.click();
+                        }
+                    }, 500);
+                }
+            }
+        }
     }
 
     /**
