@@ -617,6 +617,11 @@ class ForexAnalysisApp {
         const change = pairData?.daily_change || 0;
         const changePercent = pairData?.daily_change_percent || 0;
         
+        // Data validation information
+        const dataQuality = pairData?.data_quality || 'Unknown';
+        const confidenceScore = pairData?.confidence_score || 0;
+        const validationWarnings = pairData?.validation_warnings || 0;
+        
         // Get signal for this pair
         const signal = window.signalManager?.signals.get(pairConfig.symbol);
         const signalDirection = signal?.signal?.direction || 'HOLD';
@@ -624,13 +629,23 @@ class ForexAnalysisApp {
 
         const changeClass = change >= 0 ? 'positive' : 'negative';
         const signalClass = `signal-${signalDirection.toLowerCase()}`;
+        
+        // Determine data quality indicator
+        const qualityClass = this.getDataQualityClass(dataQuality, confidenceScore);
+        const qualityIcon = this.getDataQualityIcon(dataQuality);
+        const qualityTooltip = this.getDataQualityTooltip(dataQuality, confidenceScore, validationWarnings);
 
         card.innerHTML = `
             <div class="currency-header">
                 <div class="currency-pair">${pairConfig.name}</div>
-                <div class="currency-flag">
-                    <span class="flag">${this.getCurrencyFlag(pairConfig.base)}</span>
-                    <span class="flag">${this.getCurrencyFlag(pairConfig.quote)}</span>
+                <div class="currency-meta">
+                    <div class="currency-flag">
+                        <span class="flag">${this.getCurrencyFlag(pairConfig.base)}</span>
+                        <span class="flag">${this.getCurrencyFlag(pairConfig.quote)}</span>
+                    </div>
+                    <div class="data-quality ${qualityClass}" title="${qualityTooltip}">
+                        <i class="fas fa-${qualityIcon}"></i>
+                    </div>
                 </div>
             </div>
             
@@ -646,9 +661,85 @@ class ForexAnalysisApp {
                 <i class="fas fa-${this.getSignalIcon(signalDirection)}"></i>
                 ${signalDirection} ${signalConfidence > 0 ? `(${signalConfidence.toFixed(0)}%)` : ''}
             </div>
+            
+            ${confidenceScore > 0 ? `
+            <div class="currency-validation">
+                <div class="validation-score">
+                    Data Quality: <span class="${qualityClass}">${dataQuality}</span>
+                    ${confidenceScore > 0 ? `(${confidenceScore}%)` : ''}
+                </div>
+            </div>
+            ` : ''}
         `;
 
         return card;
+    }
+
+    /**
+     * Get data quality CSS class
+     * @param {string} quality - Data quality rating
+     * @param {number} score - Confidence score
+     * @returns {string} CSS class
+     */
+    getDataQualityClass(quality, score) {
+        if (score >= 90 || quality === 'Excellent') return 'quality-excellent';
+        if (score >= 80 || quality === 'Good') return 'quality-good';
+        if (score >= 70 || quality === 'Fair') return 'quality-fair';
+        if (score >= 50 || quality === 'Poor') return 'quality-poor';
+        return 'quality-unreliable';
+    }
+
+    /**
+     * Get data quality icon
+     * @param {string} quality - Data quality rating
+     * @returns {string} Icon class
+     */
+    getDataQualityIcon(quality) {
+        switch (quality) {
+            case 'Excellent': return 'check-circle';
+            case 'Good': return 'check';
+            case 'Fair': return 'exclamation-triangle';
+            case 'Poor': return 'exclamation-circle';
+            case 'Unreliable': return 'times-circle';
+            default: return 'question-circle';
+        }
+    }
+
+    /**
+     * Get data quality tooltip
+     * @param {string} quality - Data quality rating
+     * @param {number} score - Confidence score
+     * @param {number} warnings - Number of validation warnings
+     * @returns {string} Tooltip text
+     */
+    getDataQualityTooltip(quality, score, warnings) {
+        let tooltip = `Data Quality: ${quality}`;
+        if (score > 0) {
+            tooltip += ` (${score}% confidence)`;
+        }
+        if (warnings > 0) {
+            tooltip += `\n${warnings} validation warning${warnings > 1 ? 's' : ''}`;
+        }
+        
+        switch (quality) {
+            case 'Excellent':
+                tooltip += '\nHigh-quality real-time data from reliable sources';
+                break;
+            case 'Good':
+                tooltip += '\nReliable data with minor validation checks';
+                break;
+            case 'Fair':
+                tooltip += '\nAcceptable data quality with some limitations';
+                break;
+            case 'Poor':
+                tooltip += '\nLimited data quality, use with caution';
+                break;
+            case 'Unreliable':
+                tooltip += '\nData quality issues detected, verify independently';
+                break;
+        }
+        
+        return tooltip;
     }
 
     /**

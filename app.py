@@ -185,29 +185,72 @@ def get_forex_pairs():
                 current_price = pair_prices.get(pair)
                 
                 if current_price is not None and current_price > 0:
-                    # Generate realistic daily changes (skip historical data to prevent timeout)
-                    import random
-                    import hashlib
-                    
-                    # Use pair name to seed random for consistent but varied changes per pair
-                    seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
-                    random.seed(seed)
-                    
-                    # Generate realistic forex daily changes (typically -2% to +2%)
-                    daily_change_percent = random.uniform(-2.0, 2.0)
-                    daily_change = current_price * (daily_change_percent / 100)
-                    
-                    pairs_data.append({
-                        'symbol': pair,
-                        'name': pair,
-                        'current_price': round(current_price, 5),
-                        'daily_change': round(daily_change, 5),
-                        'daily_change_percent': round(daily_change_percent, 2),
-                        'last_updated': datetime.now().isoformat()
-                    })
-                    
-                    successful_pairs += 1
-                    logger.info(f"Data for {pair}: {current_price}")
+                    # Get validated price data
+                    try:
+                        validated_data = data_fetcher.get_validated_price_data(pair)
+                        
+                        if validated_data['success']:
+                            validation_info = validated_data['validation']
+                            confidence_score = validation_info['confidence_score']
+                            data_quality = validated_data['data_quality']
+                            
+                            # Only include high-quality data
+                            if confidence_score >= 70:
+                                # Generate realistic daily changes (skip historical data to prevent timeout)
+                                import random
+                                import hashlib
+                                
+                                # Use pair name to seed random for consistent but varied changes per pair
+                                seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
+                                random.seed(seed)
+                                
+                                # Generate realistic forex daily changes (typically -2% to +2%)
+                                daily_change_percent = random.uniform(-2.0, 2.0)
+                                daily_change = current_price * (daily_change_percent / 100)
+                                
+                                pairs_data.append({
+                                    'symbol': pair,
+                                    'name': pair,
+                                    'current_price': round(current_price, 5),
+                                    'daily_change': round(daily_change, 5),
+                                    'daily_change_percent': round(daily_change_percent, 2),
+                                    'last_updated': datetime.now().isoformat(),
+                                    'data_quality': data_quality,
+                                    'confidence_score': confidence_score,
+                                    'validation_warnings': len(validation_info.get('warnings', []))
+                                })
+                                
+                                successful_pairs += 1
+                                logger.info(f"Data for {pair}: {current_price} (quality: {data_quality}, confidence: {confidence_score}%)")
+                            else:
+                                logger.warning(f"Low confidence data for {pair}: {confidence_score}% - skipping")
+                        else:
+                            logger.warning(f"Validation failed for {pair}: {validated_data.get('error', 'Unknown error')}")
+                    except AttributeError:
+                        # Fallback to basic data without validation for older data fetcher
+                        # Generate realistic daily changes (skip historical data to prevent timeout)
+                        import random
+                        import hashlib
+                        
+                        # Use pair name to seed random for consistent but varied changes per pair
+                        seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
+                        random.seed(seed)
+                        
+                        # Generate realistic forex daily changes (typically -2% to +2%)
+                        daily_change_percent = random.uniform(-2.0, 2.0)
+                        daily_change = current_price * (daily_change_percent / 100)
+                        
+                        pairs_data.append({
+                            'symbol': pair,
+                            'name': pair,
+                            'current_price': round(current_price, 5),
+                            'daily_change': round(daily_change, 5),
+                            'daily_change_percent': round(daily_change_percent, 2),
+                            'last_updated': datetime.now().isoformat()
+                        })
+                        
+                        successful_pairs += 1
+                        logger.info(f"Data for {pair}: {current_price}")
                 else:
                     logger.warning(f"No data available for {pair}")
                     
@@ -236,6 +279,50 @@ def get_forex_pairs():
         
     except Exception as e:
         logger.error(f"Error fetching forex pairs: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/forex/validation/<pair>')
+def get_forex_validation(pair):
+    """Get detailed validation information for a specific forex pair"""
+    try:
+        # Get current price
+        current_price = data_fetcher.get_current_price(pair)
+        
+        if current_price is None:
+            return jsonify({
+                'success': False,
+                'error': f'No price data available for {pair}',
+                'pair': pair
+            }), 404
+        
+        # Try to get detailed validation if available
+        try:
+            validated_data = data_fetcher.get_validated_price_data(pair)
+            return jsonify(validated_data)
+        except AttributeError:
+            # Fallback validation using our validator directly
+            from backend.data_validator import validate_forex_data
+            validation_result = validate_forex_data(pair, current_price)
+            
+            return jsonify({
+                'success': True,
+                'pair': pair,
+                'price': current_price,
+                'validation': {
+                    'is_valid': validation_result['is_valid'],
+                    'confidence_score': validation_result['confidence_score'],
+                    'warnings': validation_result['warnings'],
+                    'errors': validation_result['errors'],
+                    'checks': validation_result['validation_checks']
+                },
+                'timestamp': validation_result['timestamp'].isoformat(),
+                'data_quality': 'Good' if validation_result['confidence_score'] >= 80 else 
+                               'Fair' if validation_result['confidence_score'] >= 70 else 
+                               'Poor' if validation_result['confidence_score'] >= 50 else 'Unreliable'
+            })
+    
+    except Exception as e:
+        logger.error(f"Error getting validation for {pair}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/forex/data/<pair>')

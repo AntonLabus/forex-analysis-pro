@@ -14,6 +14,7 @@ from typing import Optional, Dict, Any
 import time
 import json
 import random
+from .data_validator import validate_forex_data
 
 logger = logging.getLogger(__name__)
 
@@ -572,7 +573,16 @@ class DataFetcher:
                 cache_key in self.cache_expiry and 
                 datetime.now() < self.cache_expiry[cache_key]):
                 logger.info(f"Returning cached data for {pair}")
-                return self.cache[cache_key]
+                cached_price = self.cache[cache_key]
+                # Validate cached data too
+                validation_result = validate_forex_data(pair, cached_price)
+                if validation_result['is_valid'] and validation_result['confidence_score'] >= 70:
+                    return cached_price
+                else:
+                    logger.warning(f"Cached data for {pair} failed validation, fetching fresh data")
+                    # Remove invalid cached data
+                    del self.cache[cache_key]
+                    del self.cache_expiry[cache_key]
             
             # Rate limiting: wait if necessary to respect 10 requests per 1 second limit
             if not self._check_rate_limit():
@@ -580,12 +590,9 @@ class DataFetcher:
             
             # Method 1: Free APIs first (to avoid 429 errors from Yahoo Finance)
             price = self._try_free_apis(pair)
-            if price:
-                # Cache successful result for 2 minutes
-                self.cache[cache_key] = price
-                self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=2)
-                logger.info(f"Free API: {pair} = {price}")
-                return price
+            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Free API')
+            if validated_price:
+                return validated_price
             
             # Method 2: Yahoo Finance (only if free APIs fail and rate limit allows)
             symbol = self.yf_symbols.get(pair)
@@ -614,12 +621,9 @@ class DataFetcher:
                         future = executor.submit(fetch_yahoo_data)
                         try:
                             price = future.result(timeout=5)  # 5 second timeout
-                            if price:
-                                # Cache successful result for 2 minutes
-                                self.cache[cache_key] = price
-                                self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=2)
-                                logger.info(f"Yahoo Finance: {pair} = {price}")
-                                return price
+                            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Yahoo Finance')
+                            if validated_price:
+                                return validated_price
                         except FutureTimeoutError:
                             logger.warning(f"Yahoo Finance timeout for {pair}")
                         
@@ -636,24 +640,18 @@ class DataFetcher:
             if self.alpha_vantage_key and self._check_rate_limit():
                 try:
                     price = self._fetch_alpha_vantage_realtime(pair)
-                    if price:
-                        # Cache successful result
-                        self.cache[cache_key] = price
-                        self.cache_expiry[cache_key] = datetime.now() + timedelta(seconds=30)
-                        logger.info(f"Alpha Vantage: {pair} = {price}")
-                        return price
+                    validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Alpha Vantage')
+                    if validated_price:
+                        return validated_price
                 except Exception as e:
                     logger.warning(f"Alpha Vantage failed for {pair}: {e}")
             
-            # Method 3: Use fallback realistic prices if all APIs fail
+            # Method 4: Use fallback realistic prices if all APIs fail
             logger.warning(f"All external sources failed for {pair}, using fallback data")
             price = self._get_fallback_price(pair)
-            if price:
-                # Cache fallback result for shorter time
-                self.cache[cache_key] = price
-                self.cache_expiry[cache_key] = datetime.now() + timedelta(seconds=10)
-                logger.info(f"Fallback price: {pair} = {price}")
-                return price
+            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Fallback', cache_time=10)
+            if validated_price:
+                return validated_price
             
             logger.error(f"All data sources failed for {pair}")
             return None
@@ -661,6 +659,100 @@ class DataFetcher:
         except Exception as e:
             logger.error(f"Critical error getting price for {pair}: {e}")
             return None
+    
+    def _validate_and_cache_price(self, pair: str, price: Optional[float], cache_key: str, 
+                                source: str, cache_time: int = 120) -> Optional[float]:
+        """
+        Validate price data and cache if valid
+        
+        Args:
+            pair: Currency pair
+            price: Price to validate
+            cache_key: Cache key for storing valid data
+            source: Data source name for logging
+            cache_time: Cache time in seconds
+            
+        Returns:
+            Validated price or None if invalid
+        """
+        if price is None:
+            return None
+            
+        try:
+            # Validate the price data
+            validation_result = validate_forex_data(pair, price)
+            
+            if validation_result['is_valid']:
+                confidence = validation_result['confidence_score']
+                
+                # Only cache and return high-confidence data
+                if confidence >= 70:
+                    # Cache successful result
+                    self.cache[cache_key] = price
+                    self.cache_expiry[cache_key] = datetime.now() + timedelta(seconds=cache_time)
+                    logger.info(f"{source}: {pair} = {price} (confidence: {confidence}%)")
+                    return price
+                else:
+                    logger.warning(f"{source}: {pair} = {price} has low confidence ({confidence}%), skipping")
+                    return None
+            else:
+                logger.error(f"{source}: {pair} = {price} failed validation: {validation_result['errors']}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error validating price for {pair} from {source}: {e}")
+            return None
+    
+    def get_validated_price_data(self, pair: str) -> Dict[str, Any]:
+        """
+        Get current price with full validation details
+        
+        Args:
+            pair: Currency pair
+            
+        Returns:
+            Dict containing price, validation details, and metadata
+        """
+        price = self.get_current_price(pair)
+        
+        if price is None:
+            return {
+                'success': False,
+                'pair': pair,
+                'price': None,
+                'validation': None,
+                'error': 'No valid price data available'
+            }
+        
+        # Get full validation details
+        validation_result = validate_forex_data(pair, price)
+        
+        return {
+            'success': True,
+            'pair': pair,
+            'price': price,
+            'validation': {
+                'is_valid': validation_result['is_valid'],
+                'confidence_score': validation_result['confidence_score'],
+                'warnings': validation_result['warnings'],
+                'checks': validation_result['validation_checks']
+            },
+            'timestamp': validation_result['timestamp'].isoformat(),
+            'data_quality': self._get_data_quality_rating(validation_result['confidence_score'])
+        }
+    
+    def _get_data_quality_rating(self, confidence_score: int) -> str:
+        """Get human-readable data quality rating"""
+        if confidence_score >= 90:
+            return 'Excellent'
+        elif confidence_score >= 80:
+            return 'Good'
+        elif confidence_score >= 70:
+            return 'Fair'
+        elif confidence_score >= 50:
+            return 'Poor'
+        else:
+            return 'Unreliable'
     
     def _get_fallback_price(self, pair: str) -> Optional[float]:
         """Generate realistic fallback prices when APIs are unavailable"""

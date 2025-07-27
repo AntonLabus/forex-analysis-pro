@@ -29,6 +29,7 @@ const CONFIG = {
     ENDPOINTS: {
         FOREX_PAIRS: '/api/forex/pairs',
         FOREX_DATA: '/api/forex/data',
+        FOREX_VALIDATION: '/api/forex/validation',
         TECHNICAL_ANALYSIS: '/api/analysis/technical',
         FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
         SIGNALS: '/api/signals',
