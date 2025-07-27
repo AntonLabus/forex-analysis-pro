@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forex Analysis Pro - Advanced Trading Platform</title>
+    <title>Forex Analysis Pro - Professional Trading Platform</title>
     
     <!-- Styles -->
-    <link rel="stylesheet" href="static/css/styles.css?v=2.5">
+    <link rel="stylesheet" href="../static/css/styles.css?v=2.6">
+    <link rel="stylesheet" href="static/css/home.css?v=1.0">
     
     <!-- External Libraries -->
     <script src="https://unpkg.com/plotly.js@2.26.0/dist/plotly.min.js"></script>
@@ -14,305 +15,383 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Professional forex analysis platform with real-time charts, technical indicators, and trading signals">
-    <meta name="keywords" content="forex, trading, analysis, signals, charts, technical analysis">
+    <meta name="description" content="Professional forex analysis platform with real-time charts, technical indicators, and AI-powered trading signals">
+    <meta name="keywords" content="forex, trading, analysis, signals, charts, technical analysis, professional trading">
     <meta name="author" content="Forex Analysis Pro">
     
     <!-- Open Graph Tags -->
-    <meta property="og:title" content="Forex Analysis Pro - Advanced Trading Platform">
-    <meta property="og:description" content="Professional forex analysis with real-time data, advanced charts, and intelligent trading signals">
+    <meta property="og:title" content="Forex Analysis Pro - Professional Trading Platform">
+    <meta property="og:description" content="Advanced forex analysis with real-time data, professional charts, and intelligent trading signals">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://forex-analysis-pro.netlify.app">
+    <meta property="og:image" content="https://forex-analysis-pro.netlify.app/static/images/og-image.jpg">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="static/manifest.json">
+    <link rel="manifest" href="../static/manifest.json">
     <meta name="theme-color" content="#1e293b">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="../static/favicon.ico">
 </head>
-<body class="dark-theme">
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="loading-screen">
-        <div class="loading-spinner">
-            <i class="fas fa-chart-line fa-spin"></i>
+<body class="dark-theme home-page">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-background">
+            <div class="hero-pattern"></div>
+            <div class="hero-gradient"></div>
         </div>
-        <div class="loading-text">Loading Forex Analysis Pro...</div>
-    </div>
-
-    <!-- Debug Panel (collapsible) -->
-    <div id="debug-panel" class="debug-panel">
-        <div class="debug-panel-header">
-            <strong>Debug Panel</strong>
-            <button class="debug-close-btn" onclick="toggleDebugPanel()" aria-label="Close debug panel">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="debug-panel-content">
-            <div id="config-status" class="debug-item">
-                CONFIG: <span style="color: orange;">Checking...</span>
+        
+        <div class="hero-content">
+            <!-- Navigation Header -->
+            <header class="home-header">
+                <div class="logo-container">
+                    <div class="logo">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="logo-text">Forex Analysis Pro</span>
+                    </div>
+                    <div class="logo-tagline">Professional Trading Platform</div>
+                </div>
+                
+                <nav class="home-nav">
+                    <button class="nav-btn" onclick="navigateToApp('dashboard')" data-page="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="nav-btn" onclick="navigateToApp('analysis')" data-page="analysis">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analysis</span>
+                    </button>
+                    <button class="nav-btn" onclick="navigateToApp('signals')" data-page="signals">
+                        <i class="fas fa-bell"></i>
+                        <span>Signals</span>
+                    </button>
+                </nav>
+                
+                <div class="header-controls">
+                    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="connection-status" id="connection-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Live</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Main Hero Content -->
+            <div class="hero-main">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        Professional Forex Analysis
+                        <span class="hero-highlight">Made Simple</span>
+                    </h1>
+                    <p class="hero-description">
+                        Real-time market data, advanced technical analysis, and AI-powered trading signals 
+                        all in one professional platform. Make informed trading decisions with confidence.
+                    </p>
+                    
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="total-pairs">8</div>
+                            <div class="stat-label">Currency Pairs</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="active-signals">--</div>
+                            <div class="stat-label">Active Signals</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">99.9%</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="data-quality">--</div>
+                            <div class="stat-label">Data Quality</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Featured Currency Pair Card -->
+                <div class="featured-pair-container">
+                    <div class="featured-pair-card" id="featured-pair">
+                        <div class="featured-pair-header">
+                            <div class="pair-info">
+                                <div class="pair-flags">
+                                    <span class="flag large">🇪🇺</span>
+                                    <span class="flag large">🇺🇸</span>
+                                </div>
+                                <div class="pair-details">
+                                    <h3 class="pair-name">EUR/USD</h3>
+                                    <p class="pair-description">Euro / US Dollar</p>
+                                    <div class="data-quality-badge excellent" title="Excellent data quality">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Excellent Quality</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pair-actions">
+                                <button class="action-btn analyze-btn" onclick="navigateToAnalysis('EURUSD')">
+                                    <i class="fas fa-search"></i>
+                                    Analyze
+                                </button>
+                                <button class="action-btn chart-btn" onclick="navigateToChart('EURUSD')">
+                                    <i class="fas fa-chart-candlestick"></i>
+                                    Chart
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="featured-pair-content">
+                            <div class="price-display">
+                                <div class="current-price" id="featured-price">1.0850</div>
+                                <div class="price-change positive" id="featured-change">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span>+0.0023 (+0.21%)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mini-chart-container">
+                                <div class="mini-chart" id="mini-chart">
+                                    <div class="chart-placeholder">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span>Loading chart...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="featured-signal" id="featured-signal">
+                            <div class="signal-header">
+                                <div class="signal-indicator buy">
+                                    <i class="fas fa-arrow-trend-up"></i>
+                                    <span>BUY Signal</span>
+                                </div>
+                                <div class="signal-confidence">
+                                    <span class="confidence-score">85%</span>
+                                    <span class="confidence-label">Confidence</span>
+                                </div>
+                            </div>
+                            
+                            <div class="signal-details">
+                                <div class="signal-metrics">
+                                    <div class="metric">
+                                        <span class="metric-label">Entry:</span>
+                                        <span class="metric-value">1.0845</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label">Target:</span>
+                                        <span class="metric-value">1.0920</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label">Stop:</span>
+                                        <span class="metric-value">1.0790</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label">R/R:</span>
+                                        <span class="metric-value">1:1.36</span>
+                                    </div>
+                                </div>
+                                
+                                <button class="signal-action-btn" onclick="navigateToSignals()">
+                                    <i class="fas fa-bell"></i>
+                                    View All Signals
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button onclick="testApiConnection()" class="debug-test-btn">
-                <i class="fas fa-plug"></i> Test API
-            </button>
-            <div id="debug-status" class="debug-status">Ready</div>
+            
+            <!-- Quick Access Buttons -->
+            <div class="quick-access">
+                <button class="quick-btn" onclick="navigateToApp('dashboard')">
+                    <div class="quick-btn-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div class="quick-btn-content">
+                        <h4>Market Dashboard</h4>
+                        <p>Real-time overview of all major currency pairs</p>
+                    </div>
+                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
+                </button>
+                
+                <button class="quick-btn" onclick="navigateToApp('analysis')">
+                    <div class="quick-btn-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="quick-btn-content">
+                        <h4>Technical Analysis</h4>
+                        <p>Advanced charts with professional indicators</p>
+                    </div>
+                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
+                </button>
+                
+                <button class="quick-btn" onclick="navigateToApp('signals')">
+                    <div class="quick-btn-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="quick-btn-content">
+                        <h4>Trading Signals</h4>
+                        <p>AI-powered signals with confidence scoring</p>
+                    </div>
+                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
+                </button>
+            </div>
         </div>
-    </div>
-
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">
+    </section>
+    
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="features-container">
+            <h2 class="features-title">Professional Trading Tools</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-candlestick"></i>
+                    </div>
+                    <h3>Real-Time Charts</h3>
+                    <p>Professional candlestick charts with advanced technical indicators and drawing tools</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI-Powered Signals</h3>
+                    <p>Machine learning algorithms analyze market patterns to generate high-confidence trading signals</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-check"></i>
+                    </div>
+                    <h3>Data Validation</h3>
+                    <p>Multi-layer validation ensures you're always working with accurate, reliable market data</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Responsive Design</h3>
+                    <p>Fully optimized for desktop, tablet, and mobile devices with touch-friendly controls</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Optimized performance with intelligent caching and rate limiting for smooth operation</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>Global Markets</h3>
+                    <p>Coverage of all major currency pairs with real-time data from multiple providers</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Data Providers Section -->
+    <section class="providers-section">
+        <div class="providers-container">
+            <h2 class="providers-title">Trusted Data Sources</h2>
+            <p class="providers-subtitle">Powered by industry-leading financial data providers</p>
+            
+            <div class="providers-grid">
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fab fa-yahoo"></i>
+                        <span>Yahoo Finance</span>
+                    </div>
+                </div>
+                
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Alpha Vantage</span>
+                    </div>
+                </div>
+                
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>ExchangeRate API</span>
+                    </div>
+                </div>
+                
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fas fa-server"></i>
+                        <span>ExchangeRate Host</span>
+                    </div>
+                </div>
+                
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fas fa-database"></i>
+                        <span>Currency API</span>
+                    </div>
+                </div>
+                
+                <div class="provider-logo">
+                    <div class="provider-card">
+                        <i class="fas fa-cloud"></i>
+                        <span>Real-Time Data</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="providers-features">
+                <div class="provider-feature">
+                    <i class="fas fa-check-circle"></i>
+                    <span>99.9% Uptime Guarantee</span>
+                </div>
+                <div class="provider-feature">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Bank-Grade Security</span>
+                </div>
+                <div class="provider-feature">
+                    <i class="fas fa-clock"></i>
+                    <span>Sub-Second Latency</span>
+                </div>
+                <div class="provider-feature">
+                    <i class="fas fa-globe-americas"></i>
+                    <span>Global Coverage</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="home-footer">
+        <div class="footer-content">
+            <div class="footer-logo">
                 <i class="fas fa-chart-line"></i>
                 <span>Forex Analysis Pro</span>
             </div>
-            
-            <!-- Mobile Menu Button -->
-            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            
-            <nav class="nav-menu" id="nav-menu">
-                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    Dashboard
-                </a>
-                <a href="#analysis" class="nav-item" data-tab="analysis">
-                    <i class="fas fa-chart-bar"></i>
-                    Analysis
-                </a>
-                <a href="#signals" class="nav-item" data-tab="signals">
-                    <i class="fas fa-bell"></i>
-                    Signals
-                </a>
-            </nav>
-            
-            <div class="header-controls">
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button class="debug-toggle" id="debug-toggle" onclick="toggleDebugPanel()" aria-label="Toggle debug panel" title="Toggle Debug Panel">
-                    <i class="fas fa-bug"></i>
-                </button>
-                <div class="connection-status" id="connection-status">
-                    <i class="fas fa-circle"></i>
-                    <span>Connecting...</span>
-                </div>
+            <p class="footer-text">Professional forex signal provider - Educational purposes only</p>
+            <div class="footer-links">
+                <a href="#terms" onclick="showTermsModal()">Terms & Conditions</a>
+            </div>
+            <div class="footer-disclaimer">
+                <p><strong>Risk Disclaimer:</strong> This platform provides trading signals for educational and informational purposes only. 
+                We are not responsible for any financial losses incurred from following our signals. 
+                Trading forex involves substantial risk and is not suitable for all investors.</p>
             </div>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Dashboard Tab -->
-        <section id="dashboard" class="tab-content active">
-            <!-- Market Overview -->
-            <div class="section-header">
-                <h2><i class="fas fa-globe"></i> Market Overview</h2>
-                <div class="header-controls" style="display: flex; align-items: center; gap: 15px;">
-                    <button onclick="forceRefreshData()" class="refresh-btn" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        <i class="fas fa-sync-alt"></i> Refresh Data
-                    </button>
-                    <div class="last-updated">
-                        Last updated: <span id="last-updated-time">--</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Currency Pairs Grid -->
-            <div class="currency-grid" id="currency-grid">
-                <!-- Currency cards will be populated by JavaScript -->
-                <div class="loading-placeholder">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <span>Loading market data...</span>
-                </div>
-            </div>
-            
-            <!-- Quick Stats -->
-            <div class="quick-stats">
-                <div class="stat-card clickable-stat" onclick="navigateToSignals('all')" title="Click to view all signals">
-                    <div class="stat-icon"><i class="fas fa-signal"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="total-signals">0</div>
-                        <div class="stat-label">Active Signals</div>
-                    </div>
-                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                
-                <div class="stat-card clickable-stat" onclick="navigateToSignals('bullish')" title="Click to view bullish signals">
-                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="bullish-signals">0</div>
-                        <div class="stat-label">Bullish Signals</div>
-                    </div>
-                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                
-                <div class="stat-card clickable-stat" onclick="navigateToSignals('bearish')" title="Click to view bearish signals">
-                    <div class="stat-icon"><i class="fas fa-chart-line-down"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="bearish-signals">0</div>
-                        <div class="stat-label">Bearish Signals</div>
-                    </div>
-                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                
-                <div class="stat-card clickable-stat" onclick="navigateToSignals('confidence')" title="Click to view signals by confidence">
-                    <div class="stat-icon"><i class="fas fa-percentage"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="avg-confidence">0%</div>
-                        <div class="stat-label">Avg Confidence</div>
-                    </div>
-                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Analysis Tab -->
-        <section id="analysis" class="tab-content">
-            <!-- Pair Selection -->
-            <div class="analysis-controls">
-                <div class="pair-selector">
-                    <label for="analysis-pair">Currency Pair:</label>
-                    <select id="analysis-pair">
-                        <option value="EURUSD">EUR/USD</option>
-                        <option value="GBPUSD">GBP/USD</option>
-                        <option value="USDJPY">USD/JPY</option>
-                        <option value="USDCHF">USD/CHF</option>
-                        <option value="AUDUSD">AUD/USD</option>
-                        <option value="USDCAD">USD/CAD</option>
-                        <option value="NZDUSD">NZD/USD</option>
-                        <option value="EURGBP">EUR/GBP</option>
-                    </select>
-                </div>
-                
-                <div class="timeframe-selector">
-                    <label for="analysis-timeframe">Timeframe:</label>
-                    <select id="analysis-timeframe">
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m">15 Minutes</option>
-                        <option value="30m">30 Minutes</option>
-                        <option value="1h" selected>1 Hour</option>
-                        <option value="4h">4 Hours</option>
-                        <option value="1d">1 Day</option>
-                    </select>
-                </div>
-                
-                <button class="analyze-btn" id="analyze-btn">
-                    <div class="analyze-btn-content">
-                        <i class="fas fa-search"></i>
-                        <span class="analyze-text">Analyze</span>
-                    </div>
-                    <div class="analyze-progress-bar">
-                        <div class="analyze-progress-fill"></div>
-                    </div>
-                    <div class="analyze-progress-text">Analyzing...</div>
-                </button>
-            </div>
-            
-            <!-- Chart Container -->
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h3 id="chart-title">EURUSD - 1 Hour Chart</h3>
-                    <div class="chart-controls">
-                        <button class="chart-btn" data-indicator="sma">SMA</button>
-                        <button class="chart-btn" data-indicator="ema">EMA</button>
-                        <button class="chart-btn" data-indicator="bollinger">Bollinger Bands</button>
-                        <button class="chart-btn" data-indicator="rsi">RSI</button>
-                        <button class="chart-btn" data-indicator="macd">MACD</button>
-                        <button class="chart-btn" data-indicator="volume">Volume</button>
-                    </div>
-                </div>
-                <div id="price-chart" class="chart">
-                    <div class="chart-placeholder">
-                        <i class="fas fa-chart-candlestick"></i>
-                        <span>Click "Analyze" to view chart</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Analysis Results -->
-            <div class="analysis-results">
-                <div class="analysis-section">
-                    <h3><i class="fas fa-cogs"></i> Technical Analysis</h3>
-                    <div id="technical-results" class="results-content">
-                        <div class="loading">Click "Analyze" to view technical analysis</div>
-                    </div>
-                </div>
-                
-                <div class="analysis-section">
-                    <h3><i class="fas fa-newspaper"></i> Fundamental Analysis</h3>
-                    <div id="fundamental-results" class="results-content">
-                        <div class="loading">Click "Analyze" to view fundamental analysis</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Signals Tab -->
-        <section id="signals" class="tab-content">
-            <div class="signals-header">
-                <h2><i class="fas fa-bell"></i> Trading Signals</h2>
-                <div class="signals-controls">
-                    <select id="signal-pair-filter">
-                        <option value="">All Pairs</option>
-                        <option value="EURUSD">EUR/USD</option>
-                        <option value="GBPUSD">GBP/USD</option>
-                        <option value="USDJPY">USD/JPY</option>
-                        <option value="USDCHF">USD/CHF</option>
-                        <option value="AUDUSD">AUD/USD</option>
-                        <option value="USDCAD">USD/CAD</option>
-                        <option value="NZDUSD">NZD/USD</option>
-                        <option value="EURGBP">EUR/GBP</option>
-                    </select>
-                    <select id="signals-timeframe">
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m">15 Minutes</option>
-                        <option value="30m">30 Minutes</option>
-                        <option value="1h" selected>1 Hour</option>
-                        <option value="4h">4 Hours</option>
-                        <option value="1d">1 Day</option>
-                    </select>
-                    <button id="refresh-signals" class="refresh-btn">
-                        <i class="fas fa-sync-alt"></i>
-                        Refresh
-                    </button>
-                </div>
-            </div>
-            
-            <div id="signals-container" class="signals-container">
-                <div class="loading-placeholder">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <span>Loading signals...</span>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Notification Container -->
-    <div id="notification-container" class="notification-container"></div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="loading-content">
-            <div class="loading-spinner">
-                <i class="fas fa-chart-line fa-spin"></i>
-            </div>
-            <div class="loading-text" id="loading-text">Loading...</div>
-        </div>
-    </div>
-
+    </footer>
+    
     <!-- Scripts -->
-    <!-- Inline CONFIG definition to ensure it's available immediately -->
     <script>
-        console.log('Creating immediate CONFIG...');
-        
         // Immediate CONFIG definition
         window.CONFIG = {
             API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
@@ -320,202 +399,76 @@
             ENDPOINTS: {
                 FOREX_PAIRS: '/api/forex/pairs',
                 FOREX_DATA: '/api/forex/data',
+                FOREX_VALIDATION: '/api/forex/validation',
                 TECHNICAL_ANALYSIS: '/api/analysis/technical',
                 FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
                 SIGNALS: '/api/signals',
                 HEALTH: '/api/health'
             },
             CURRENCY_PAIRS: [
-                { symbol: 'EURUSD', name: 'Euro / US Dollar' },
-                { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
-                { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
-                { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
-                { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
-                { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
-                { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
-                { symbol: 'EURGBP', name: 'Euro / British Pound' }
-            ],
-            THEME: {
-                DEFAULT: 'dark',
-                COLORS: {
-                    PRIMARY: '#3b82f6',
-                    SUCCESS: '#10b981',
-                    ERROR: '#ef4444',
-                    WARNING: '#f59e0b'
-                }
-            },
-            NOTIFICATIONS: {
-                DURATION: {
-                    SUCCESS: 3000,
-                    ERROR: 5000,
-                    WARNING: 4000,
-                    INFO: 3000
-                },
-                POSITION: 'top-right'
-            },
-            UPDATE_INTERVALS: {
-                PRICES: 30000,
-                SIGNALS: 60000,
-                CHART: 15000
-            },
-            TIMEFRAMES: [
-                { value: '5m', label: '5 Minutes' },
-                { value: '15m', label: '15 Minutes' },
-                { value: '30m', label: '30 Minutes' },
-                { value: '1h', label: '1 Hour' },
-                { value: '4h', label: '4 Hours' },
-                { value: '1d', label: '1 Day' }
-            ],
-            STORAGE_KEYS: {
-                THEME: 'forex_theme',
-                WATCHLIST: 'forex_watchlist',
-                SETTINGS: 'forex_settings'
-            }
+                { symbol: 'EURUSD', name: 'Euro / US Dollar', base: 'EUR', quote: 'USD' },
+                { symbol: 'GBPUSD', name: 'British Pound / US Dollar', base: 'GBP', quote: 'USD' },
+                { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen', base: 'USD', quote: 'JPY' },
+                { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc', base: 'USD', quote: 'CHF' },
+                { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar', base: 'AUD', quote: 'USD' },
+                { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar', base: 'USD', quote: 'CAD' },
+                { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar', base: 'NZD', quote: 'USD' },
+                { symbol: 'EURGBP', name: 'Euro / British Pound', base: 'EUR', quote: 'GBP' }
+            ]
         };
-        
-        console.log('CONFIG created immediately:', window.CONFIG);
-        
-        // Debug script loading order
-        window.addEventListener('error', function(e) {
-            if (e.target.tagName === 'SCRIPT') {
-                console.error('Script failed to load:', e.target.src);
-            }
-        });
     </script>
     
-    <!-- External config.js will override if it loads successfully -->
-    <script src="static/js/config_clean.js?v=1.2" onload="console.log('External config_clean.js loaded successfully')" onerror="console.warn('External config_clean.js failed to load, using inline CONFIG')"></script>
-    <script src="static/js/utils.js?v=2.0" onload="console.log('utils.js loaded')" onerror="console.error('Failed to load utils.js')"></script>
-    <script src="static/js/chart.js?v=2.0" onload="console.log('chart.js loaded')" onerror="console.error('Failed to load chart.js')"></script>
-    <script src="static/js/signals.js?v=2.2" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
-    <script src="static/js/app.js?v=2.4" onload="console.log('app.js loaded')" onerror="console.error('Failed to load app.js')"></script>
-
-    <script>
-        // Check CONFIG status when page loads
-        function checkConfigStatus() {
-            const configStatus = document.getElementById('config-status');
-            if (configStatus) {
-                if (typeof CONFIG !== 'undefined') {
-                    configStatus.innerHTML = 'CONFIG: <span style="color: #10b981;">✅ Loaded</span>';
-                    console.log('CONFIG loaded successfully:', CONFIG);
-                } else {
-                    configStatus.innerHTML = 'CONFIG: <span style="color: #ef4444;">❌ Missing</span>';
-                    console.error('CONFIG is not defined');
-                }
-            }
-        }
-
-        // Fallback CONFIG if external script fails
-        function ensureConfig() {
-            // CONFIG should already exist from inline definition
-            if (typeof CONFIG !== 'undefined') {
-                console.log('CONFIG already available, no fallback needed');
-                return;
-            }
-            
-            // This should rarely be needed now
-            console.warn('Creating emergency fallback CONFIG');
-            window.CONFIG = {
-                API_BASE_URL: 'https://forex-analysis-pro.onrender.com',
-                WEBSOCKET_URL: 'https://forex-analysis-pro.onrender.com',
-                ENDPOINTS: {
-                    FOREX_PAIRS: '/api/forex/pairs',
-                    FOREX_DATA: '/api/forex/data',
-                    TECHNICAL_ANALYSIS: '/api/analysis/technical',
-                    FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
-                    SIGNALS: '/api/signals',
-                    HEALTH: '/api/health'
-                },
-                CURRENCY_PAIRS: [
-                    { symbol: 'EURUSD', name: 'Euro / US Dollar' },
-                    { symbol: 'GBPUSD', name: 'British Pound / US Dollar' },
-                    { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
-                    { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
-                    { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar' },
-                    { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
-                    { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
-                    { symbol: 'EURGBP', name: 'Euro / British Pound' }
-                ]
-            };
-        }
-
-        // Hide loading screen when everything is loaded
-        window.addEventListener('load', () => {
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 500);
-            }
-            
-            // Ensure CONFIG exists
-            ensureConfig();
-            
-            // Check CONFIG status
-            setTimeout(checkConfigStatus, 100);
-        });
-
-        // Handle offline/online status
-        window.addEventListener('online', () => {
-            console.log('Connection restored');
-        });
-
-        window.addEventListener('offline', () => {
-            console.log('Connection lost - operating offline');
-        });
-
-        // Debug function to test API connection
-        async function testApiConnection() {
-            const debugStatus = document.getElementById('debug-status');
-            debugStatus.innerHTML = 'Testing...';
-            
-            try {
-                // Ensure CONFIG exists
-                ensureConfig();
+    <!-- Terms & Conditions Modal -->
+    <div id="termsModal" class="modal-overlay" onclick="closeTermsModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Terms & Conditions</h2>
+                <button class="modal-close" onclick="closeTermsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Signal Provider Services</h3>
+                <p>Forex Analysis Pro operates exclusively as a trading signal provider. We provide educational content and trading signals based on technical and fundamental analysis.</p>
                 
-                // Check if CONFIG is available
-                if (typeof CONFIG === 'undefined') {
-                    throw new Error('CONFIG is still not defined even after fallback creation');
-                }
+                <h3>Risk Disclaimer</h3>
+                <p><strong>Trading forex involves substantial risk and is not suitable for all investors.</strong> The high degree of leverage can work against you as well as for you. Before deciding to trade foreign exchange, you should carefully consider your investment objectives, level of experience, and risk appetite.</p>
                 
-                const apiUrl = CONFIG.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
-                console.log('Testing API connection to:', apiUrl);
-                console.log('Full CONFIG object:', CONFIG);
+                <h3>No Responsibility for Losses</h3>
+                <p><strong>We are not responsible for any financial losses incurred from following our trading signals.</strong> All signals provided are for educational and informational purposes only and should not be considered as financial advice.</p>
                 
-                const fullUrl = `${apiUrl}/api/forex/pairs`;
-                console.log('Full request URL:', fullUrl);
+                <h3>Educational Purpose</h3>
+                <p>Our platform is designed for educational purposes to help traders understand market dynamics and analysis techniques. Users should:</p>
+                <ul>
+                    <li>Conduct their own research before making trading decisions</li>
+                    <li>Never risk more than they can afford to lose</li>
+                    <li>Consider seeking advice from independent financial advisors</li>
+                    <li>Practice proper risk management</li>
+                </ul>
                 
-                const response = await fetch(fullUrl, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
+                <h3>No Financial Advice</h3>
+                <p>Nothing on this platform constitutes financial advice. We do not provide investment recommendations or advice on when to buy or sell specific financial instruments.</p>
                 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', [...response.headers.entries()]);
+                <h3>Data Accuracy</h3>
+                <p>While we strive to provide accurate data and analysis, we cannot guarantee the accuracy, completeness, or timeliness of any information provided. Market conditions can change rapidly.</p>
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                <h3>Limitation of Liability</h3>
+                <p>In no event shall Forex Analysis Pro be liable for any direct, indirect, incidental, special, or consequential damages arising from the use of our services or reliance on our signals.</p>
                 
-                const data = await response.json();
-                console.log('API Response:', data);
+                <h3>User Responsibility</h3>
+                <p>By using our platform, you acknowledge that:</p>
+                <ul>
+                    <li>You understand the risks involved in forex trading</li>
+                    <li>You are solely responsible for your trading decisions</li>
+                    <li>You will not hold us liable for any trading losses</li>
+                    <li>You agree to trade responsibly and within your means</li>
+                </ul>
                 
-                if (data.success && data.data) {
-                    debugStatus.innerHTML = `✅ Success: ${data.data.length} pairs loaded`;
-                } else {
-                    debugStatus.innerHTML = `❌ No data in response`;
-                }
-                
-            } catch (error) {
-                console.error('API test failed:', error);
-                debugStatus.innerHTML = `❌ Error: ${error.message}`;
-            }
-        }
-    </script>
+                <p class="terms-footer"><strong>Last updated:</strong> July 27, 2025</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="static/js/config.js?v=1.2"></script>
+    <script src="static/js/utils.js?v=2.0"></script>
+    <script src="static/js/home.js?v=1.0"></script>
 </body>
 </html>

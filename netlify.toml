@@ -12,7 +12,17 @@
   # Set Node version (even though we're not using Node, Netlify requires this)
   NODE_VERSION = "18"
 
-# Redirect all routes to index.html for SPA behavior
+# Redirect all routes to index.html for SPA behavior, except app.html
+[[redirects]]
+  from = "/app"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/app/*"
+  to = "/app.html"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

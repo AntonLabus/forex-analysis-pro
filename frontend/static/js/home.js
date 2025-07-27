@@ -455,22 +455,22 @@ function closeTermsModal() {
 // Navigation functions
 function navigateToApp(tab = 'dashboard') {
     // Navigate to main app with specific tab
-    window.location.href = `/app#${tab}`;
+    window.location.href = `app.html#${tab}`;
 }
 
 function navigateToAnalysis(pair = 'EURUSD') {
     // Navigate to analysis page with specific pair
-    window.location.href = `/app#analysis?pair=${pair}`;
+    window.location.href = `app.html#analysis?pair=${pair}`;
 }
 
 function navigateToChart(pair = 'EURUSD') {
     // Navigate to analysis page with chart focus
-    window.location.href = `/app#analysis?pair=${pair}&chart=true`;
+    window.location.href = `app.html#analysis?pair=${pair}&chart=true`;
 }
 
 function navigateToSignals() {
     // Navigate to signals page
-    window.location.href = `/app#signals`;
+    window.location.href = `app.html#signals`;
 }
 
 // Initialize when page loads
