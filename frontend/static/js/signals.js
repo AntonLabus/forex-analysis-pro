@@ -6,33 +6,8 @@ class SignalManager {
     constructor() {
         this.signals = new Map();
         this.signalHistory = [];
-        this.currentFilterType = 'all'; // Track current filter typ        const direction = signal.signal?.direction || 'HOLD';
-        const confidence = signal.signal?.confidence || 0;
-        const strength = signal.signal?.strength || 0;
-        const timeframe = signal.timeframe || this.currentTimeframe;
-        
-        const directionClass = direction.toLowerCase();
-        const confidenceColor = Utils.getConfidenceColor(confidence);
-        const signalColor = Utils.getSignalColor(direction);
-        
-        // Timeframe labels for display
-        const timeframeLabels = {
-            '5m': '5m',
-            '15m': '15m', 
-            '30m': '30m',
-            '1h': '1h',
-            '4h': '4h',
-            '1d': '1d'
-        };
-
-        card.innerHTML = `
-            <div class="signal-header">
-                <div class="signal-pair-info">
-                    <div class="signal-pair">${signal.pair}</div>
-                    <div class="signal-timeframe">${timeframeLabels[timeframe] || timeframe}</div>
-                </div>
-                <div class="signal-time">${Utils.getRelativeTime(signal.timestamp)}</div>
-            </div>`;is.currentTimeframe = '1h'; // Track current timeframe
+        this.currentFilterType = 'all'; // Track current filter type
+        this.currentTimeframe = '1h'; // Track current timeframe
         this.filters = {
             pair: '',
             direction: '',

@@ -68,6 +68,33 @@ class ForexAnalysisApp {
      * Set up event listeners for UI interactions
      */
     setupEventListeners() {
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const navMenu = document.getElementById('nav-menu');
+        
+        if (mobileMenuToggle && navMenu) {
+            mobileMenuToggle.addEventListener('click', () => {
+                mobileMenuToggle.classList.toggle('active');
+                navMenu.classList.toggle('active');
+            });
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!mobileMenuToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                }
+            });
+            
+            // Close mobile menu when selecting a tab
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                });
+            });
+        }
+        
         // Tab navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
