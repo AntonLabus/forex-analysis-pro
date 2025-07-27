@@ -22,6 +22,9 @@ class ForexAnalysisApp {
             // Initialize theme
             Utils.setTheme(Utils.getTheme());
             
+            // Initialize debug panel (hidden by default)
+            this.initDebugPanel();
+            
             // Set up event listeners
             this.setupEventListeners();
             
@@ -39,6 +42,26 @@ class ForexAnalysisApp {
             console.error('Failed to initialize application:', error);
             Utils.showNotification('Failed to initialize application', 'error');
         }
+    }
+
+    /**
+     * Initialize debug panel
+     */
+    initDebugPanel() {
+        const debugPanel = document.getElementById('debug-panel');
+        const debugToggle = document.getElementById('debug-toggle');
+        
+        if (debugPanel) {
+            // Hide debug panel by default
+            debugPanel.classList.remove('visible');
+        }
+        
+        if (debugToggle) {
+            debugToggle.classList.remove('active');
+            debugToggle.setAttribute('aria-label', 'Show debug panel');
+        }
+        
+        console.log('Debug panel initialized (hidden by default)');
     }
 
     /**
@@ -80,6 +103,9 @@ class ForexAnalysisApp {
 
         // Make refresh function globally available for inline onclick handlers
         window.forceRefreshData = () => this.refreshAllData();
+
+        // Make debug panel toggle function globally available
+        window.toggleDebugPanel = () => this.toggleDebugPanel();
 
         // Make navigation function globally available for stat cards
         window.navigateToSignals = (filterType) => {
@@ -760,6 +786,32 @@ class ForexAnalysisApp {
             setTimeout(() => {
                 progressFill.style.width = '0%';
             }, 300);
+        }
+    }
+
+    /**
+     * Toggle debug panel visibility
+     */
+    toggleDebugPanel() {
+        const debugPanel = document.getElementById('debug-panel');
+        const debugToggle = document.getElementById('debug-toggle');
+        
+        if (debugPanel && debugToggle) {
+            const isVisible = debugPanel.classList.contains('visible');
+            
+            if (isVisible) {
+                // Hide panel
+                debugPanel.classList.remove('visible');
+                debugToggle.classList.remove('active');
+                debugToggle.setAttribute('aria-label', 'Show debug panel');
+                console.log('Debug panel hidden');
+            } else {
+                // Show panel
+                debugPanel.classList.add('visible');
+                debugToggle.classList.add('active');
+                debugToggle.setAttribute('aria-label', 'Hide debug panel');
+                console.log('Debug panel shown');
+            }
         }
     }
 
