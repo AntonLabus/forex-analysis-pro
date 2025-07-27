@@ -33,9 +33,7 @@ const CONFIG = {
         FUNDAMENTAL_ANALYSIS: '/api/analysis/fundamental',
         SIGNALS: '/api/signals',
         SIGNALS_ALL: '/api/signals/all',
-        HEALTH: '/api/health',
-        RATE_LIMITS: '/api/system/rate-limits',
-        SYSTEM_HEALTH: '/api/system/health'
+        HEALTH: '/api/health'
     },
     
     // Currency pairs configuration
