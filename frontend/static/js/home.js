@@ -14,25 +14,37 @@ class HomePage {
 
     async init() {
         try {
+            console.log('Starting home page initialization...');
             // Initialize theme
             this.initTheme();
+            console.log('Theme initialized');
             
             // Load initial data
+            console.log('Loading featured pair data...');
             await this.loadFeaturedPairData();
+            console.log('Featured pair data loaded');
+            
+            console.log('Loading market stats...');
             await this.loadMarketStats();
+            console.log('Market stats loaded');
             
             // Load mini chart with delay to ensure Chart.js is ready
+            console.log('Setting up chart loading timeout...');
             setTimeout(() => {
+                console.log('Chart loading timeout triggered, calling loadMiniChart...');
                 this.loadMiniChart();
             }, 1000);
             
             // Set up event listeners
+            console.log('Setting up event listeners...');
             this.setupEventListeners();
             
             // Start auto-refresh
+            console.log('Starting auto-refresh...');
             this.startAutoRefresh();
             
             // Initialize WebSocket connection
+            console.log('Initializing WebSocket...');
             this.initWebSocket();
             
             console.log('Home page initialized successfully');
