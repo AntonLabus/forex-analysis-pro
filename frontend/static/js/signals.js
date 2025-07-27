@@ -6,7 +6,33 @@ class SignalManager {
     constructor() {
         this.signals = new Map();
         this.signalHistory = [];
-        this.currentFilterType = 'all'; // Track current filter type
+        this.currentFilterType = 'all'; // Track current filter typ        const direction = signal.signal?.direction || 'HOLD';
+        const confidence = signal.signal?.confidence || 0;
+        const strength = signal.signal?.strength || 0;
+        const timeframe = signal.timeframe || this.currentTimeframe;
+        
+        const directionClass = direction.toLowerCase();
+        const confidenceColor = Utils.getConfidenceColor(confidence);
+        const signalColor = Utils.getSignalColor(direction);
+        
+        // Timeframe labels for display
+        const timeframeLabels = {
+            '5m': '5m',
+            '15m': '15m', 
+            '30m': '30m',
+            '1h': '1h',
+            '4h': '4h',
+            '1d': '1d'
+        };
+
+        card.innerHTML = `
+            <div class="signal-header">
+                <div class="signal-pair-info">
+                    <div class="signal-pair">${signal.pair}</div>
+                    <div class="signal-timeframe">${timeframeLabels[timeframe] || timeframe}</div>
+                </div>
+                <div class="signal-time">${Utils.getRelativeTime(signal.timestamp)}</div>
+            </div>`;is.currentTimeframe = '1h'; // Track current timeframe
         this.filters = {
             pair: '',
             direction: '',
@@ -75,18 +101,21 @@ class SignalManager {
     }
 
     /**
-     * Fetch signal for a specific pair
+     * Fetch signal for a specific pair with timeframe
      * @param {string} pair - Currency pair
+     * @param {string} timeframe - Timeframe (optional, uses current if not provided)
      * @returns {Promise} Signal data
      */
-    async fetchSignalForPair(pair) {
+    async fetchSignalForPair(pair, timeframe = null) {
         try {
-            const url = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}`;
+            const selectedTimeframe = timeframe || this.currentTimeframe;
+            const url = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?timeframe=${selectedTimeframe}`;
             const response = await Utils.request(url);
             
             if (response.success) {
-                // Add the pair name to the signal data
+                // Add the pair name and timeframe to the signal data
                 response.signals.pair = pair;
+                response.signals.timeframe = selectedTimeframe;
                 this.signals.set(pair, response.signals);
                 return response.signals;
             } else {
@@ -95,6 +124,65 @@ class SignalManager {
         } catch (error) {
             console.error(`Error fetching signal for ${pair}:`, error);
             return null;
+        }
+    }
+
+    /**
+     * Update signals for a specific timeframe
+     * @param {string} timeframe - New timeframe to use
+     */
+    async updateSignalsForTimeframe(timeframe) {
+        console.log(`Updating signals for timeframe: ${timeframe}`);
+        this.currentTimeframe = timeframe;
+        
+        // Clear existing signals
+        this.signals.clear();
+        
+        // Show loading state
+        const container = document.getElementById('signals-container');
+        if (container) {
+            container.innerHTML = '<div class="loading-placeholder"><i class="fas fa-spinner fa-spin"></i><span>Loading signals for ' + timeframe + '...</span></div>';
+        }
+        
+        // Update signals display with timeframe indicator
+        this.updateSignalsHeader();
+        
+        // Fetch new signals for current timeframe
+        await this.fetchAllSignals();
+        
+        Utils.showNotification(`Signals updated for ${timeframe} timeframe`, 'info');
+    }
+
+    /**
+     * Update signals header to show current timeframe
+     */
+    updateSignalsHeader() {
+        const timeframeLabels = {
+            '5m': '5 Minutes',
+            '15m': '15 Minutes', 
+            '30m': '30 Minutes',
+            '1h': '1 Hour',
+            '4h': '4 Hours',
+            '1d': '1 Day'
+        };
+        
+        // Find or create timeframe indicator
+        let timeframeIndicator = document.querySelector('.signals-timeframe-indicator');
+        const signalsContainer = document.getElementById('signals-container');
+        
+        if (!timeframeIndicator && signalsContainer) {
+            timeframeIndicator = document.createElement('div');
+            timeframeIndicator.className = 'signals-timeframe-indicator';
+            signalsContainer.parentNode.insertBefore(timeframeIndicator, signalsContainer);
+        }
+        
+        if (timeframeIndicator) {
+            timeframeIndicator.innerHTML = `
+                <div class="timeframe-indicator-content">
+                    <i class="fas fa-clock"></i>
+                    <span>Signals for ${timeframeLabels[this.currentTimeframe] || this.currentTimeframe}</span>
+                </div>
+            `;
         }
     }
 
@@ -627,3 +715,20 @@ class SignalManager {
 
 // Global signal manager instance
 window.signalManager = new SignalManager();
+
+// Initialize signals timeframe selector event listener
+document.addEventListener('DOMContentLoaded', () => {
+    const signalsTimeframeSelector = document.getElementById('signals-timeframe');
+    if (signalsTimeframeSelector) {
+        signalsTimeframeSelector.addEventListener('change', (event) => {
+            const selectedTimeframe = event.target.value;
+            console.log('Signals timeframe changed to:', selectedTimeframe);
+            
+            // Update the signal manager's current timeframe
+            window.signalManager.currentTimeframe = selectedTimeframe;
+            
+            // Refresh signals with new timeframe
+            window.signalManager.updateSignalsForTimeframe(selectedTimeframe);
+        });
+    }
+});

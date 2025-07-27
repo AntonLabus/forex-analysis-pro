@@ -141,6 +141,25 @@ class ForexAnalysisApp {
             analyzeBtn.addEventListener('click', () => this.performAnalysis());
         }
 
+        // Timeframe selector for signal updates
+        const timeframeSelector = document.getElementById('analysis-timeframe');
+        if (timeframeSelector) {
+            timeframeSelector.addEventListener('change', (e) => {
+                const newTimeframe = e.target.value;
+                console.log('Timeframe changed to:', newTimeframe);
+                
+                // Update signals if on signals tab
+                if (this.currentTab === 'signals' && window.signalManager) {
+                    window.signalManager.updateSignalsForTimeframe(newTimeframe);
+                }
+                
+                // Store timeframe for future signal updates
+                if (window.signalManager) {
+                    window.signalManager.currentTimeframe = newTimeframe;
+                }
+            });
+        }
+
         // Chart indicator toggles
         document.querySelectorAll('.chart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -664,7 +683,12 @@ class ForexAnalysisApp {
         switch (tabName) {
             case 'signals':
                 if (window.signalManager) {
-                    await window.signalManager.fetchAllSignals();
+                    // Get current timeframe from analysis tab
+                    const timeframeSelector = document.getElementById('analysis-timeframe');
+                    const currentTimeframe = timeframeSelector?.value || '1h';
+                    
+                    // Update signal manager timeframe and fetch signals
+                    await window.signalManager.updateSignalsForTimeframe(currentTimeframe);
                 }
                 break;
             case 'analysis':

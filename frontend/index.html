@@ -6,7 +6,7 @@
     <title>Forex Analysis Pro - Advanced Trading Platform</title>
     
     <!-- Styles -->
-    <link rel="stylesheet" href="static/css/styles.css?v=2.3">
+    <link rel="stylesheet" href="static/css/styles.css?v=2.4">
     
     <!-- External Libraries -->
     <script src="https://unpkg.com/plotly.js@2.26.0/dist/plotly.min.js"></script>
@@ -264,6 +264,14 @@
                         <option value="NZDUSD">NZD/USD</option>
                         <option value="EURGBP">EUR/GBP</option>
                     </select>
+                    <select id="signals-timeframe">
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h" selected>1 Hour</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                    </select>
                     <button id="refresh-signals" class="refresh-btn">
                         <i class="fas fa-sync-alt"></i>
                         Refresh
@@ -372,7 +380,7 @@
     <script src="static/js/config_clean.js?v=1.2" onload="console.log('External config_clean.js loaded successfully')" onerror="console.warn('External config_clean.js failed to load, using inline CONFIG')"></script>
     <script src="static/js/utils.js?v=2.0" onload="console.log('utils.js loaded')" onerror="console.error('Failed to load utils.js')"></script>
     <script src="static/js/chart.js?v=2.0" onload="console.log('chart.js loaded')" onerror="console.error('Failed to load chart.js')"></script>
-    <script src="static/js/signals.js?v=2.0" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
+    <script src="static/js/signals.js?v=2.1" onload="console.log('signals.js loaded')" onerror="console.error('Failed to load signals.js')"></script>
     <script src="static/js/app.js?v=2.3" onload="console.log('app.js loaded')" onerror="console.error('Failed to load app.js')"></script>
 
     <script>
