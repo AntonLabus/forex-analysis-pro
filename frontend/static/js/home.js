@@ -296,8 +296,110 @@ class HomePage {
         `;
     }
 
-    createActualChart(container) {
-        // Create a simple price chart using Chart.js
+    async createActualChart(container) {
+        try {
+            console.log('Creating actual chart with real data');
+            
+            // Create a simple price chart using Chart.js
+            const canvas = document.createElement('canvas');
+            canvas.id = 'mini-chart-canvas';
+            canvas.width = 300;
+            canvas.height = 150;
+            
+            // Clear the placeholder and add canvas
+            container.innerHTML = '';
+            container.appendChild(canvas);
+
+            // Fetch real price data from API
+            const chartData = await this.generateRealChartData('EURUSD', '1h', '1d');
+            console.log('Chart data for rendering:', chartData);
+            
+            // Determine line color based on data trend
+            const prices = chartData.prices.map(p => parseFloat(p));
+            const isPositive = prices[prices.length - 1] > prices[0];
+            const lineColor = isPositive ? '#10b981' : '#ef4444'; // green for up, red for down
+            
+            // Create the chart
+            const chart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'EUR/USD',
+                        data: chartData.prices,
+                        borderColor: lineColor,
+                        backgroundColor: `${lineColor}20`, // add transparency
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: lineColor,
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `EUR/USD: ${parseFloat(context.parsed.y).toFixed(4)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            display: false
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+            
+            console.log('Chart created successfully with real data:', chart);
+            
+            // Show data source indicator
+            if (chartData.source) {
+                const sourceIndicator = document.createElement('div');
+                sourceIndicator.className = 'chart-source-indicator';
+                sourceIndicator.innerHTML = `
+                    <i class="fas fa-${chartData.source === 'historical' ? 'database' : 'flask'}"></i>
+                    <span>${chartData.source === 'historical' ? 'Real Data' : 'Demo Data'}</span>
+                `;
+                container.appendChild(sourceIndicator);
+            }
+            
+        } catch (error) {
+            console.error('Error creating chart with real data:', error);
+            // Fall back to sample data chart
+            this.createSampleChart(container);
+        }
+    }
+
+    createSampleChart(container) {
+        // Create a simple price chart using Chart.js with sample data
         const canvas = document.createElement('canvas');
         canvas.id = 'mini-chart-canvas';
         canvas.width = 300;
@@ -307,7 +409,7 @@ class HomePage {
         container.innerHTML = '';
         container.appendChild(canvas);
 
-        // Generate sample price data (in a real app, this would come from your API)
+        // Generate sample price data as fallback
         const sampleData = this.generateSampleChartData();
         console.log('Sample data generated:', sampleData);
         
@@ -360,10 +462,50 @@ class HomePage {
             }
         });
         
-        console.log('Chart created successfully:', chart);
+        console.log('Sample chart created successfully:', chart);
+    }
+
+    async generateRealChartData(pair = 'EURUSD', timeframe = '1h', period = '1d') {
+        try {
+            console.log(`Fetching real chart data for ${pair} with timeframe ${timeframe} and period ${period}`);
+            
+            const apiUrl = window.CONFIG?.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
+            const response = await fetch(`${apiUrl}/api/forex/data/${pair}?timeframe=${timeframe}&period=${period}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('Chart data API response:', result);
+            
+            if (result.success && result.data && result.data.length > 0) {
+                const labels = [];
+                const prices = [];
+                
+                // Use the last 24 data points for the mini chart
+                const dataToShow = result.data.slice(-24);
+                
+                dataToShow.forEach(point => {
+                    const date = new Date(point.timestamp);
+                    labels.push(date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+                    prices.push(parseFloat(point.close));
+                });
+                
+                console.log(`Generated chart data with ${labels.length} points from real API data`);
+                return { labels, prices, source: result.data_source };
+            } else {
+                throw new Error('No chart data available from API');
+            }
+        } catch (error) {
+            console.error('Error fetching real chart data:', error);
+            // Fall back to sample data if API fails
+            return this.generateSampleChartData();
+        }
     }
 
     generateSampleChartData() {
+        console.log('Generating sample chart data as fallback');
         const labels = [];
         const prices = [];
         const basePrice = 1.0850;
@@ -382,7 +524,7 @@ class HomePage {
             prices.push(price.toFixed(4));
         }
         
-        return { labels, prices };
+        return { labels, prices, source: 'sample' };
     }
 
     updateSignalDisplay(signal) {
