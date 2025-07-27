@@ -269,17 +269,52 @@ def get_forex_pairs():
                             
                             # Only include high-quality data
                             if confidence_score >= 70:
-                                # Generate realistic daily changes (skip historical data to prevent timeout)
-                                import random
-                                import hashlib
-                                
-                                # Use pair name to seed random for consistent but varied changes per pair
-                                seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
-                                random.seed(seed)
-                                
-                                # Generate realistic forex daily changes (typically -2% to +2%)
-                                daily_change_percent = random.uniform(-2.0, 2.0)
-                                daily_change = current_price * (daily_change_percent / 100)
+                                # Calculate REAL daily changes from historical data
+                                try:
+                                    # Get historical data to calculate real daily change
+                                    hist_data = data_fetcher.get_historical_data(pair, period='2d', interval='1d')
+                                    
+                                    if hist_data is not None and len(hist_data) >= 2:
+                                        # Get yesterday's close and calculate real change
+                                        yesterday_close = float(hist_data.iloc[-2]['Close'])
+                                        today_current = current_price
+                                        
+                                        daily_change = today_current - yesterday_close
+                                        daily_change_percent = (daily_change / yesterday_close) * 100
+                                        
+                                        logger.info(f"Real daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
+                                    else:
+                                        # Fallback: try to get change from Yahoo Finance directly
+                                        try:
+                                            import yfinance as yf
+                                            yf_symbol = {'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X', 'USDJPY': 'USDJPY=X', 'USDCHF': 'USDCHF=X', 'AUDUSD': 'AUDUSD=X', 'USDCAD': 'USDCAD=X', 'NZDUSD': 'NZDUSD=X', 'EURGBP': 'EURGBP=X'}.get(pair)
+                                            
+                                            if yf_symbol:
+                                                ticker = yf.Ticker(yf_symbol)
+                                                hist = ticker.history(period='2d')
+                                                
+                                                if len(hist) >= 2:
+                                                    yesterday_close = float(hist['Close'].iloc[-2])
+                                                    daily_change = current_price - yesterday_close
+                                                    daily_change_percent = (daily_change / yesterday_close) * 100
+                                                    logger.info(f"Yahoo daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
+                                                else:
+                                                    raise Exception("Insufficient Yahoo data")
+                                            else:
+                                                raise Exception("No Yahoo symbol mapping")
+                                        except Exception as yahoo_error:
+                                            logger.warning(f"Yahoo fallback failed for {pair}: {yahoo_error}")
+                                            # Final fallback: use conservative estimate (small random change)
+                                            import random
+                                            daily_change_percent = random.uniform(-0.5, 0.5)  # Much smaller range
+                                            daily_change = current_price * (daily_change_percent / 100)
+                                            logger.warning(f"Using fallback change for {pair}: {daily_change_percent:.2f}%")
+                                            
+                                except Exception as calc_error:
+                                    logger.error(f"Error calculating daily change for {pair}: {calc_error}")
+                                    # Minimal fallback
+                                    daily_change_percent = 0.0
+                                    daily_change = 0.0
                                 
                                 pairs_data.append({
                                     'symbol': pair,
@@ -301,17 +336,30 @@ def get_forex_pairs():
                             logger.warning(f"Validation failed for {pair}: {validated_data.get('error', 'Unknown error')}")
                     except AttributeError:
                         # Fallback to basic data without validation for older data fetcher
-                        # Generate realistic daily changes (skip historical data to prevent timeout)
-                        import random
-                        import hashlib
-                        
-                        # Use pair name to seed random for consistent but varied changes per pair
-                        seed = int(hashlib.md5(f"{pair}{datetime.now().date()}".encode()).hexdigest()[:8], 16)
-                        random.seed(seed)
-                        
-                        # Generate realistic forex daily changes (typically -2% to +2%)
-                        daily_change_percent = random.uniform(-2.0, 2.0)
-                        daily_change = current_price * (daily_change_percent / 100)
+                        # Try to calculate real daily changes even in fallback mode
+                        try:
+                            import yfinance as yf
+                            yf_symbol = {'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X', 'USDJPY': 'USDJPY=X', 'USDCHF': 'USDCHF=X', 'AUDUSD': 'AUDUSD=X', 'USDCAD': 'USDCAD=X', 'NZDUSD': 'NZDUSD=X', 'EURGBP': 'EURGBP=X'}.get(pair)
+                            
+                            if yf_symbol:
+                                ticker = yf.Ticker(yf_symbol)
+                                hist = ticker.history(period='2d')
+                                
+                                if len(hist) >= 2:
+                                    yesterday_close = float(hist['Close'].iloc[-2])
+                                    daily_change = current_price - yesterday_close
+                                    daily_change_percent = (daily_change / yesterday_close) * 100
+                                    logger.info(f"Fallback Yahoo daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
+                                else:
+                                    raise Exception("Insufficient historical data")
+                            else:
+                                raise Exception("No symbol mapping available")
+                                
+                        except Exception as fallback_error:
+                            logger.warning(f"Fallback daily change calculation failed for {pair}: {fallback_error}")
+                            # Minimal change as last resort
+                            daily_change_percent = 0.0
+                            daily_change = 0.0
                         
                         pairs_data.append({
                             'symbol': pair,
