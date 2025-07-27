@@ -295,6 +295,55 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
+}
+
+/* Clickable stat card styles */
+.stat-card.clickable-stat {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.stat-card.clickable-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-color);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.stat-card.clickable-stat:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow);
+}
+
+.stat-card.clickable-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.stat-card.clickable-stat:hover::before {
+  left: 100%;
+}
+
+.stat-arrow {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+}
+
+.stat-card.clickable-stat:hover .stat-arrow {
+  color: var(--accent-color);
+  transform: translateX(3px);
+  opacity: 1;
 }
 
 .stat-icon {
@@ -524,6 +573,47 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1.5rem;
+}
+
+/* Signals filter indicator */
+.signals-filter-indicator {
+  background: var(--accent-color);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+}
+
+.filter-indicator-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.clear-filter-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+}
+
+.clear-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
 }
 
 .signal-card {

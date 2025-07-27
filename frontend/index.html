@@ -119,36 +119,40 @@
             
             <!-- Quick Stats -->
             <div class="quick-stats">
-                <div class="stat-card">
+                <div class="stat-card clickable-stat" onclick="navigateToSignals('all')" title="Click to view all signals">
                     <div class="stat-icon"><i class="fas fa-signal"></i></div>
                     <div class="stat-info">
                         <div class="stat-value" id="total-signals">0</div>
                         <div class="stat-label">Active Signals</div>
                     </div>
+                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
                 
-                <div class="stat-card">
+                <div class="stat-card clickable-stat" onclick="navigateToSignals('bullish')" title="Click to view bullish signals">
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="stat-info">
                         <div class="stat-value" id="bullish-signals">0</div>
                         <div class="stat-label">Bullish Signals</div>
                     </div>
+                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
                 
-                <div class="stat-card">
+                <div class="stat-card clickable-stat" onclick="navigateToSignals('bearish')" title="Click to view bearish signals">
                     <div class="stat-icon"><i class="fas fa-chart-line-down"></i></div>
                     <div class="stat-info">
                         <div class="stat-value" id="bearish-signals">0</div>
                         <div class="stat-label">Bearish Signals</div>
                     </div>
+                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
                 
-                <div class="stat-card">
+                <div class="stat-card clickable-stat" onclick="navigateToSignals('confidence')" title="Click to view signals by confidence">
                     <div class="stat-icon"><i class="fas fa-percentage"></i></div>
                     <div class="stat-info">
                         <div class="stat-value" id="avg-confidence">0%</div>
                         <div class="stat-label">Avg Confidence</div>
                     </div>
+                    <div class="stat-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
             </div>
         </section>

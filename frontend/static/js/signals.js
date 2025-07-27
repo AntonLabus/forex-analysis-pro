@@ -129,7 +129,7 @@ class SignalManager {
     getFilteredSignals() {
         const allSignals = Array.from(this.signals.values()).filter(signal => signal);
         
-        return allSignals.filter(signal => {
+        let filteredSignals = allSignals.filter(signal => {
             // Filter by pair
             if (this.filters.pair && signal.pair !== this.filters.pair) {
                 return false;
@@ -148,6 +148,17 @@ class SignalManager {
             
             return true;
         });
+
+        // Sort by confidence if it's a confidence-based filter
+        if (this.currentFilterType === 'confidence') {
+            filteredSignals.sort((a, b) => {
+                const confidenceA = a.signal?.confidence || 0;
+                const confidenceB = b.signal?.confidence || 0;
+                return confidenceB - confidenceA; // Highest confidence first
+            });
+        }
+
+        return filteredSignals;
     }
 
     /**
@@ -527,6 +538,89 @@ class SignalManager {
             <p><strong>Take Profit 2:</strong> ${levels.take_profit_2 || 'N/A'}</p>
             ${levels.risk_reward_ratio ? `<p><strong>Risk/Reward Ratio:</strong> 1:${levels.risk_reward_ratio}</p>` : ''}
         `;
+    }
+
+    /**
+     * Apply filter to signals based on dashboard stats navigation
+     * @param {string} filterType - Type of filter to apply
+     */
+    applyFilter(filterType) {
+        // Reset current filters
+        this.filters = {
+            pair: '',
+            direction: '',
+            confidence: 0
+        };
+
+        // Store current filter type for sorting
+        this.currentFilterType = filterType;
+
+        // Apply specific filter based on type
+        switch (filterType) {
+            case 'all':
+                // No additional filtering, show all signals
+                break;
+            case 'bullish':
+                this.filters.direction = 'BUY';
+                break;
+            case 'bearish':
+                this.filters.direction = 'SELL';
+                break;
+            case 'confidence':
+                // Will be sorted in getFilteredSignals method
+                break;
+        }
+
+        // Update the display with filtered results
+        this.updateSignalDisplay();
+
+        // Scroll to signals container
+        const container = document.getElementById('signals-container');
+        if (container) {
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Update filter indicator in UI if it exists
+        this.updateFilterIndicator(filterType);
+    }
+
+    /**
+     * Update filter indicator in the UI
+     * @param {string} filterType - Active filter type
+     */
+    updateFilterIndicator(filterType) {
+        // Remove existing filter indicators
+        const existingIndicator = document.querySelector('.signals-filter-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+
+        // Add new filter indicator if not showing all
+        if (filterType !== 'all') {
+            const signalsContainer = document.getElementById('signals-container');
+            if (signalsContainer) {
+                const indicator = document.createElement('div');
+                indicator.className = 'signals-filter-indicator';
+                
+                const filterLabels = {
+                    'bullish': 'Bullish Signals Only',
+                    'bearish': 'Bearish Signals Only',
+                    'confidence': 'Sorted by Confidence'
+                };
+
+                indicator.innerHTML = `
+                    <div class="filter-indicator-content">
+                        <i class="fas fa-filter"></i>
+                        <span>${filterLabels[filterType]}</span>
+                        <button class="clear-filter-btn" onclick="window.signalManager.applyFilter('all')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+
+                signalsContainer.parentNode.insertBefore(indicator, signalsContainer);
+            }
+        }
     }
 }
 

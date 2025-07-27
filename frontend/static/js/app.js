@@ -81,6 +81,29 @@ class ForexAnalysisApp {
         // Make refresh function globally available for inline onclick handlers
         window.forceRefreshData = () => this.refreshAllData();
 
+        // Make navigation function globally available for stat cards
+        window.navigateToSignals = (filterType) => {
+            // Switch to signals tab
+            this.switchTab('signals');
+            
+            // Apply filter if signal manager exists
+            if (window.signalManager && typeof window.signalManager.applyFilter === 'function') {
+                setTimeout(() => {
+                    window.signalManager.applyFilter(filterType);
+                }, 100);
+            }
+            
+            // Show notification about the filter
+            const filterMessages = {
+                'all': 'Showing all active signals',
+                'bullish': 'Showing bullish signals only',
+                'bearish': 'Showing bearish signals only',
+                'confidence': 'Signals sorted by confidence level'
+            };
+            
+            Utils.showNotification(filterMessages[filterType] || 'Viewing signals', 'info');
+        };
+
         // Analysis controls
         const analyzeBtn = document.getElementById('analyze-btn');
         if (analyzeBtn) {
