@@ -206,40 +206,40 @@
                 </div>
             </div>
             
-            <!-- Quick Access Buttons -->
-            <div class="quick-access">
-                <button class="quick-btn" onclick="navigateToApp('dashboard')">
-                    <div class="quick-btn-icon">
-                        <i class="fas fa-tachometer-alt"></i>
-                    </div>
-                    <div class="quick-btn-content">
-                        <h4>Market Dashboard</h4>
-                        <p>Real-time overview of all major currency pairs</p>
-                    </div>
-                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
-                </button>
-                
-                <button class="quick-btn" onclick="navigateToApp('analysis')">
-                    <div class="quick-btn-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <div class="quick-btn-content">
-                        <h4>Technical Analysis</h4>
-                        <p>Advanced charts with professional indicators</p>
-                    </div>
-                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
-                </button>
-                
-                <button class="quick-btn" onclick="navigateToApp('signals')">
-                    <div class="quick-btn-icon">
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    <div class="quick-btn-content">
-                        <h4>Trading Signals</h4>
-                        <p>AI-powered signals with confidence scoring</p>
-                    </div>
-                    <i class="fas fa-chevron-right quick-btn-arrow"></i>
-                </button>
+            <!-- Market Overview Cards -->
+            <div class="market-overview" style="margin: 2rem 0 1.5rem 0; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;">
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">EUR/USD</div>
+                    <div id="overview-price-EURUSD" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">GBP/USD</div>
+                    <div id="overview-price-GBPUSD" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">USD/JPY</div>
+                    <div id="overview-price-USDJPY" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">USD/CHF</div>
+                    <div id="overview-price-USDCHF" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">AUD/USD</div>
+                    <div id="overview-price-AUDUSD" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">USD/CAD</div>
+                    <div id="overview-price-USDCAD" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">NZD/USD</div>
+                    <div id="overview-price-NZDUSD" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
+                <div class="overview-card" style="min-width: 170px; background: var(--card-bg, #1e293b); border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem;">EUR/GBP</div>
+                    <div id="overview-price-EURGBP" style="font-size: 1.45rem; font-weight: 700; letter-spacing: 0.5px;">--</div>
+                </div>
             </div>
         </div>
     </section>

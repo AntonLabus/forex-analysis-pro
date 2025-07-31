@@ -592,11 +592,11 @@ class HomePage {
     async loadMarketStats() {
         try {
             const apiUrl = window.CONFIG?.API_BASE_URL || 'http://localhost:5000';
-            
+
             // Load total signals
             const signalsResponse = await fetch(`${apiUrl}/api/signals/all`);
             const signalsData = await signalsResponse.json();
-            
+
             if (signalsData.success) {
                 const totalSignals = signalsData.signals?.length || 0;
                 const activeSignalsElement = document.getElementById('active-signals');
@@ -608,12 +608,12 @@ class HomePage {
             // Load data quality average
             const pairsResponse = await fetch(`${apiUrl}/api/forex/pairs`);
             const pairsData = await pairsResponse.json();
-            
-            if (pairsData.success && pairsData.data) {
+
+            if (pairsData && pairsData.success && Array.isArray(pairsData.data)) {
                 const qualityScores = pairsData.data
                     .map(pair => pair.confidence_score)
                     .filter(score => score > 0);
-                
+
                 if (qualityScores.length > 0) {
                     const avgQuality = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
                     const dataQualityElement = document.getElementById('data-quality');
@@ -621,8 +621,16 @@ class HomePage {
                         dataQualityElement.textContent = `${Math.round(avgQuality)}%`;
                     }
                 }
+
+                // Update market overview cards with correct price formatting
+                pairsData.data.forEach(pair => {
+                    const priceElement = document.getElementById(`overview-price-${pair.symbol}`);
+                    if (priceElement) {
+                        priceElement.textContent = this.formatPrice(pair.current_price, pair.symbol);
+                    }
+                });
             }
-            
+
         } catch (error) {
             console.error('Error loading market stats:', error);
         }
@@ -760,14 +768,14 @@ class HomePage {
     }
 
     // Utility methods
-    formatPrice(price) {
+    formatPrice(price, symbol = null) {
         if (typeof price !== 'number') return '0.00000';
-        // Try to infer if this is a JPY pair from the featured pair or fallback to 5 decimals
-        let pair = this.featuredPair || '';
+        // Use the provided symbol, or fallback to featuredPair
+        let pair = symbol || this.featuredPair || '';
         let decimals = pair.endsWith('JPY') ? 2 : 5;
         let priceStr = price.toFixed(decimals);
         // Remove trailing zeros and decimal if not needed
-        priceStr = priceStr.replace(/\.?(0+)$/, '');
+        priceStr = priceStr.replace(/\.?0+$/, '');
         return priceStr;
     }
 
