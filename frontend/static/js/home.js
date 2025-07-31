@@ -761,8 +761,14 @@ class HomePage {
 
     // Utility methods
     formatPrice(price) {
-        if (typeof price !== 'number') return '0.0000';
-        return price.toFixed(4);
+        if (typeof price !== 'number') return '0.00000';
+        // Try to infer if this is a JPY pair from the featured pair or fallback to 5 decimals
+        let pair = this.featuredPair || '';
+        let decimals = pair.endsWith('JPY') ? 2 : 5;
+        let priceStr = price.toFixed(decimals);
+        // Remove trailing zeros and decimal if not needed
+        priceStr = priceStr.replace(/\.?(0+)$/, '');
+        return priceStr;
     }
 
     getQualityClass(quality) {
