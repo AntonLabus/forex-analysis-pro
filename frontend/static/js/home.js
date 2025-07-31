@@ -772,11 +772,9 @@ class HomePage {
         if (typeof price !== 'number') return '0.00000';
         // Use the provided symbol, or fallback to featuredPair
         let pair = symbol || this.featuredPair || '';
-        let decimals = pair.endsWith('JPY') ? 2 : 5;
-        let priceStr = price.toFixed(decimals);
-        // Remove trailing zeros and decimal if not needed
-        priceStr = priceStr.replace(/\.?0+$/, '');
-        return priceStr;
+        // Show 3 decimals for JPY pairs, 5 for others, always keep trailing zeros
+        let decimals = pair.endsWith('JPY') ? 3 : 5;
+        return price.toFixed(decimals);
     }
 
     getQualityClass(quality) {
