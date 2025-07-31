@@ -251,6 +251,14 @@ class DataFetcher:
                     data = response.json()
                     if 'rates' in data and to_symbol in data['rates']:
                         price = float(data['rates'][to_symbol])
+                        # Format price: JPY pairs to 2 decimals, others to 5 decimals, remove trailing zeros
+                        if pair.endswith('JPY'):
+                            price = round(price, 2)
+                        else:
+                            price = round(price, 5)
+                        price_str = f"{price:.5f}" if not pair.endswith('JPY') else f"{price:.2f}"
+                        price_str = price_str.rstrip('0').rstrip('.') if '.' in price_str else price_str
+                        price = float(price_str)
                         logger.info(f"ExchangeRate-API: {pair} = {price}")
                         return price
             except Exception as e:
@@ -265,6 +273,13 @@ class DataFetcher:
                     data = response.json()
                     if to_symbol.lower() in data:
                         price = float(data[to_symbol.lower()])
+                        if pair.endswith('JPY'):
+                            price = round(price, 2)
+                        else:
+                            price = round(price, 5)
+                        price_str = f"{price:.5f}" if not pair.endswith('JPY') else f"{price:.2f}"
+                        price_str = price_str.rstrip('0').rstrip('.') if '.' in price_str else price_str
+                        price = float(price_str)
                         logger.info(f"Fawaz Currency API: {pair} = {price}")
                         return price
             except Exception as e:
@@ -279,6 +294,13 @@ class DataFetcher:
                     data = response.json()
                     if 'rates' in data and to_symbol in data['rates']:
                         price = float(data['rates'][to_symbol])
+                        if pair.endswith('JPY'):
+                            price = round(price, 2)
+                        else:
+                            price = round(price, 5)
+                        price_str = f"{price:.5f}" if not pair.endswith('JPY') else f"{price:.2f}"
+                        price_str = price_str.rstrip('0').rstrip('.') if '.' in price_str else price_str
+                        price = float(price_str)
                         logger.info(f"ExchangeRate.host: {pair} = {price}")
                         return price
             except Exception as e:
@@ -774,7 +796,15 @@ class DataFetcher:
             variation = random.uniform(-0.005, 0.005)  # ±0.5%
             realistic_price = base_price * (1 + variation)
             
-            return round(realistic_price, 5)
+            # Format price: JPY pairs to 2 decimals, others to 5 decimals, remove trailing zeros
+            if pair.endswith('JPY'):
+                price = round(realistic_price, 2)
+            else:
+                price = round(realistic_price, 5)
+            # Remove trailing zeros
+            price_str = f"{price:.5f}" if not pair.endswith('JPY') else f"{price:.2f}"
+            price_str = price_str.rstrip('0').rstrip('.') if '.' in price_str else price_str
+            return float(price_str)
             
         except Exception as e:
             logger.error(f"Error generating fallback price for {pair}: {e}")
@@ -828,7 +858,13 @@ class DataFetcher:
                 if 'Realtime Currency Exchange Rate' in data:
                     rate_data = data['Realtime Currency Exchange Rate']
                     price = float(rate_data['5. Exchange Rate'])
-                    return price
+                    if pair.endswith('JPY'):
+                        price = round(price, 2)
+                    else:
+                        price = round(price, 5)
+                    price_str = f"{price:.5f}" if not pair.endswith('JPY') else f"{price:.2f}"
+                    price_str = price_str.rstrip('0').rstrip('.') if '.' in price_str else price_str
+                    return float(price_str)
             
             return None
             
