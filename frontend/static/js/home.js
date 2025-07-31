@@ -769,12 +769,9 @@ class HomePage {
 
     // Utility methods
     formatPrice(price, symbol = null) {
-        if (typeof price !== 'number') return '0.00000';
-        // Use the provided symbol, or fallback to featuredPair
-        let pair = symbol || this.featuredPair || '';
-        // Show 3 decimals for JPY pairs, 5 for others, always keep trailing zeros
-        let decimals = pair.endsWith('JPY') ? 3 : 5;
-        return price.toFixed(decimals);
+        // Display the price exactly as received from the backend, no formatting, no rounding, no padding
+        if (price === undefined || price === null) return '--';
+        return String(price);
     }
 
     getQualityClass(quality) {
