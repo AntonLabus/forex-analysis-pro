@@ -142,7 +142,11 @@ class TechnicalAnalysis:
                 'timestamp': datetime.now().isoformat(),
                 'summary': summary,
                 'trend_analysis': trend_analysis,
-                'momentum_analysis': momentum_analysis,
+                'momentum_indicators': momentum_analysis,  # Renamed for signal_generator compatibility
+                'oscillators': self._analyze_oscillators(close, high, low),
+                'moving_averages': self._analyze_moving_averages(close),
+                'support_resistance': self._analyze_support_resistance(close),
+                'pattern_recognition': self._analyze_patterns(close, high, low),
                 'volatility_analysis': volatility_analysis,
                 'volume_analysis': volume_analysis,
                 'last_price': float(close.iloc[-1]) if len(close) > 0 else 0,
