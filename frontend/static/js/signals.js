@@ -491,24 +491,24 @@ class SignalManager {
      */
     renderTradingLevels(levels) {
         if (!levels) return '';
-
+        // Show raw price values as received from backend, no formatting
         return `
             <div class="signal-levels">
                 <div class="level-item">
                     <span class="level-label">Entry:</span>
-                    <span class="level-value">${levels.entry || 'N/A'}</span>
+                    <span class="level-value">${levels.entry !== undefined && levels.entry !== null ? String(levels.entry) : 'N/A'}</span>
                 </div>
                 <div class="level-item">
                     <span class="level-label">Stop Loss:</span>
-                    <span class="level-value">${levels.stop_loss || 'N/A'}</span>
+                    <span class="level-value">${levels.stop_loss !== undefined && levels.stop_loss !== null ? String(levels.stop_loss) : 'N/A'}</span>
                 </div>
                 <div class="level-item">
                     <span class="level-label">Take Profit 1:</span>
-                    <span class="level-value">${levels.take_profit_1 || 'N/A'}</span>
+                    <span class="level-value">${levels.take_profit_1 !== undefined && levels.take_profit_1 !== null ? String(levels.take_profit_1) : 'N/A'}</span>
                 </div>
                 <div class="level-item">
                     <span class="level-label">Take Profit 2:</span>
-                    <span class="level-value">${levels.take_profit_2 || 'N/A'}</span>
+                    <span class="level-value">${levels.take_profit_2 !== undefined && levels.take_profit_2 !== null ? String(levels.take_profit_2) : 'N/A'}</span>
                 </div>
                 ${levels.risk_reward_ratio ? `
                 <div class="level-item">
