@@ -62,9 +62,12 @@ class SignalGenerator:
             position_size = self._calculate_position_size(risk_metrics, combined_signal)
             
             # Create final signal output
+            now = datetime.now()
+            valid_until = now + timedelta(hours=1)  # Signals valid for 1 hour by default
             signal_output = {
                 'pair': pair,
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': now.isoformat(),
+                'valid_until': valid_until.isoformat(),
                 'signal': combined_signal,
                 'technical_signal': tech_signal,
                 'fundamental_signal': fund_signal,
