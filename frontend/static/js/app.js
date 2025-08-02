@@ -1408,6 +1408,9 @@ class ForexAnalysisApp {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // Show alert to confirm page loaded
+    alert('Application loaded! Look for the bright red box with FOREX/CRYPTO buttons in the header!');
+    
     window.app = new ForexAnalysisApp();
     window.forexApp = window.app; // Keep both for compatibility
     window.chartManager = new ChartManager();
