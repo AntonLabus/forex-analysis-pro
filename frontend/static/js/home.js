@@ -1,3 +1,19 @@
+let MARKET_TYPE = 'forex';
+
+function setMarketType(type) {
+    MARKET_TYPE = type;
+    document.getElementById('forex-btn').classList.toggle('active', type === 'forex');
+    document.getElementById('crypto-btn').classList.toggle('active', type === 'crypto');
+    // Reload all relevant data/views
+    if (window.homePage) {
+        window.homePage.loadMarketStats();
+        window.homePage.loadFeaturedPairData();
+        window.homePage.loadMiniChart();
+    }
+    if (window.signalManager) {
+        window.signalManager.loadSignals();
+    }
+}
 /**
  * Home Page JavaScript
  * Handles home page interactions and data loading
@@ -6,6 +22,7 @@
 class HomePage {
     constructor() {
         this.featuredPair = 'EURUSD';
+        window.homePage = this;
         this.updateInterval = null;
         this.socket = null;
         

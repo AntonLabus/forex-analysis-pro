@@ -86,6 +86,13 @@ class SignalManager {
      */
     async fetchSignals(pair = '') {
         try {
+            // Filter pairs by market type
+            let pairs = CONFIG.CURRENCY_PAIRS.map(pair => pair.symbol);
+            if (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE === 'crypto') {
+                pairs = pairs.filter(p => p.endsWith('USD') && (p.startsWith('BTC') || p.startsWith('ETH') || p.startsWith('BNB') || p.startsWith('SOL') || p.startsWith('XRP') || p.startsWith('ADA') || p.startsWith('DOGE') || p.startsWith('DOT') || p.startsWith('LTC') || p.startsWith('BCH') || p.startsWith('AVAX') || p.startsWith('SHIB') || p.startsWith('TRX') || p.startsWith('LINK') || p.startsWith('MATIC') || p.startsWith('ATOM')));
+            } else {
+                pairs = pairs.filter(p => !p.startsWith('BTC') && !p.startsWith('ETH') && !p.startsWith('BNB') && !p.startsWith('SOL') && !p.startsWith('XRP') && !p.startsWith('ADA') && !p.startsWith('DOGE') && !p.startsWith('DOT') && !p.startsWith('LTC') && !p.startsWith('BCH') && !p.startsWith('AVAX') && !p.startsWith('SHIB') && !p.startsWith('TRX') && !p.startsWith('LINK') && !p.startsWith('MATIC') && !p.startsWith('ATOM'));
+            }
             // Check cache first for single pair requests
             if (pair) {
                 const cached = this.getCachedSignal(pair, this.currentTimeframe);
@@ -95,16 +102,12 @@ class SignalManager {
                     return { success: true, signals: cached };
                 }
             }
-            
             // Rate limiting
             await this.waitForRateLimit();
-            
             const url = pair ? 
                 `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?timeframe=${this.currentTimeframe}` :
                 `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?timeframe=${this.currentTimeframe}`;
-            
             const response = await Utils.request(url);
-            
             if (response.success) {
                 if (pair) {
                     // Cache single pair response
@@ -116,13 +119,11 @@ class SignalManager {
                         // Add the pair name to the signal data
                         signalData.pair = pairName;
                         signalData.timeframe = this.currentTimeframe;
-                        
                         // Cache each pair's signal
                         this.setCachedSignal(pairName, this.currentTimeframe, signalData);
                         this.signals.set(pairName, signalData);
                     }
                 }
-                
                 this.updateSignalDisplay();
                 return response;
             } else {
