@@ -96,9 +96,17 @@ class DataFetcher:
         # MAXIMUM conservative legacy rate limiting
         self.last_request_time = {}
         self.rate_limit_delay = 5.0  # MASSIVE delay - increased from 3.0
-        self.request_timestamps = []
+        self.request_timestamps = []  # Essential for rate limiting
         self.max_requests_per_window = 4  # Reduced from 8 (was 10)
         self.rate_limit_window = 2  # Increased from 1 second
+        
+        # Ensure all required attributes exist for production stability
+        if not hasattr(self, 'request_timestamps'):
+            self.request_timestamps = []
+        if not hasattr(self, 'max_requests_per_window'):
+            self.max_requests_per_window = 4
+        if not hasattr(self, 'rate_limit_window'):
+            self.rate_limit_window = 2
         
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
@@ -487,7 +495,15 @@ class DataFetcher:
                 
                 return True
         
-        # General rate limiting (fallback)
+        # General rate limiting (fallback) with safety checks
+        # Ensure required attributes exist
+        if not hasattr(self, 'request_timestamps'):
+            self.request_timestamps = []
+        if not hasattr(self, 'max_requests_per_window'):
+            self.max_requests_per_window = 4
+        if not hasattr(self, 'rate_limit_window'):
+            self.rate_limit_window = 2
+            
         # Remove timestamps older than the rate limit window
         self.request_timestamps = [
             timestamp for timestamp in self.request_timestamps 
@@ -517,8 +533,14 @@ class DataFetcher:
             logger.debug(f"Updated {api_name} request count: {counts['hourly']}/hour, {counts['daily']}/day")
     
     def _wait_for_rate_limit(self) -> None:
-        """Wait if necessary to respect rate limiting"""
+        """Wait if necessary to respect rate limiting with safety checks"""
         import time
+        
+        # Ensure required attributes exist
+        if not hasattr(self, 'request_timestamps'):
+            self.request_timestamps = []
+        if not hasattr(self, 'rate_limit_window'):
+            self.rate_limit_window = 2
         
         if not self._check_rate_limit():
             current_time = time.time()
