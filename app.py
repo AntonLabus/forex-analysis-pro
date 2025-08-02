@@ -109,25 +109,17 @@ app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
 app.start_time = time.time()
 
 # Initialize extensions
-CORS(app, origins=[
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
-    "https://forex-analysis-pro.netlify.app",
-    "https://forex-analysis-pro.onrender.com"
-], supports_credentials=True, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:3000",
-            "http://localhost:5000",
-            "http://127.0.0.1:5000",
-            "https://forex-analysis-pro.netlify.app",
-            "https://forex-analysis-pro.onrender.com"
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
-    }
-})
+CORS(app, 
+     origins=[
+         "http://localhost:3000",
+         "http://localhost:5000",
+         "http://127.0.0.1:5000",
+         "https://forex-analysis-pro.netlify.app",
+         "https://forex-analysis-pro.onrender.com"
+     ],
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 socketio = SocketIO(app, 
                    cors_allowed_origins=[
@@ -142,21 +134,6 @@ socketio = SocketIO(app,
                    logger=False,
                    ping_timeout=30,
                    ping_interval=10)
-
-# Add CORS headers to all responses
-@app.after_request
-def after_request(response):
-    """Add CORS headers to all responses"""
-    origin = request.headers.get('Origin')
-    if origin in ['https://forex-analysis-pro.netlify.app', 'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000']:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-    else:
-        response.headers.add('Access-Control-Allow-Origin', '*')
-    
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
 
 # Initialize core components
 data_fetcher = DataFetcher()
@@ -551,11 +528,7 @@ def get_forex_pairs():
                 }
                 
                 logger.info(f"Returning fallback {market_type} data with {len(fallback_crypto_data)} pairs")
-                response = jsonify(response_data)
-                response.headers.add('Access-Control-Allow-Origin', '*')
-                response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-                response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-                return response
+                return jsonify(response_data)
             
             return jsonify({
                 'success': False, 
@@ -575,11 +548,7 @@ def get_forex_pairs():
         }
         
         logger.info(f"Returning {market_type} data with {successful_pairs} pairs")
-        response = jsonify(response_data)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        return response
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Error fetching forex pairs: {e}")
