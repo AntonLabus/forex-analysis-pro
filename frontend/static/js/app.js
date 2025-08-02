@@ -5,30 +5,53 @@
 // Global market type variable
 let MARKET_TYPE = 'forex';
 
+// Test function to verify onclick handlers work
+window.testClick = function() {
+    console.log('Test click function works!');
+    alert('JavaScript is working!');
+};
+
 // Global function to set market type
 function setMarketType(type) {
-    console.log('Setting market type to:', type);
+    console.log('=== setMarketType called with:', type, '===');
+    console.log('Current MARKET_TYPE before change:', MARKET_TYPE);
+    
     MARKET_TYPE = type;
     
     // Update button states
     const forexBtn = document.getElementById('forex-btn');
     const cryptoBtn = document.getElementById('crypto-btn');
     
+    console.log('Found forex button:', !!forexBtn);
+    console.log('Found crypto button:', !!cryptoBtn);
+    
     if (forexBtn) forexBtn.classList.toggle('active', type === 'forex');
     if (cryptoBtn) cryptoBtn.classList.toggle('active', type === 'crypto');
     
+    console.log('Button states updated');
+    
     // Refresh all data with new market type
     if (window.app) {
+        console.log('Calling app.refreshAllData()');
         window.app.refreshAllData();
+    } else {
+        console.log('window.app not available');
     }
     
     // Update other parts of the app
     if (window.signalManager) {
+        console.log('Calling signalManager.loadSignals()');
         window.signalManager.loadSignals();
+    } else {
+        console.log('window.signalManager not available');
     }
     
     console.log('Market type set to:', type);
+    console.log('=== setMarketType completed ===');
 }
+
+// Ensure the function is available globally
+window.setMarketType = setMarketType;
 
 class ForexAnalysisApp {
     constructor() {

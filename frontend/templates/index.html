@@ -42,6 +42,11 @@
             </nav>
             
             <div class="header-controls">
+                <button onclick="testClick()" style="background: red; color: white; padding: 8px; margin-right: 10px;">TEST</button>
+                <div class="market-toggle">
+                    <button class="market-btn active" id="forex-btn" onclick="setMarketType('forex')">Forex</button>
+                    <button class="market-btn" id="crypto-btn" onclick="setMarketType('crypto')">Crypto</button>
+                </div>
                 <button class="theme-toggle" id="theme-toggle">
                     <i class="fas fa-moon"></i>
                 </button>
