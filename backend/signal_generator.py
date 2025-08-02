@@ -215,10 +215,10 @@ class SignalGenerator:
                 weighted_signal = sum(s * w for s, w in zip(signals, weights)) / total_weight
                 confidence = min(abs(weighted_signal) * 100, 100)
                 
-                # Determine signal direction
-                if weighted_signal > 0.1:
+                # Determine signal direction with more aggressive thresholds for forex trading
+                if weighted_signal > 0.05:  # Lowered from 0.1 to 0.05 (5% threshold)
                     direction = 'BUY'
-                elif weighted_signal < -0.1:
+                elif weighted_signal < -0.05:  # Lowered from -0.1 to -0.05 (5% threshold)
                     direction = 'SELL'
                 else:
                     direction = 'HOLD'

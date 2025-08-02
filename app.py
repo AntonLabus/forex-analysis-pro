@@ -1026,13 +1026,13 @@ def generate_basic_signals(pair: str, current_price: float) -> Dict[str, Any]:
         confidence_base = random.uniform(45, 80)  # Base confidence varies by pair
         signal_types = ['BUY', 'SELL', 'HOLD']
         
-        # Different pairs have different signal tendencies
+        # Different pairs have different signal tendencies (more aggressive trading signals)
         if 'USD' in pair and pair.endswith('USD'):  # Currency vs USD
-            weights = [0.4, 0.3, 0.3]  # Slightly favor BUY for USD pairs
+            weights = [0.45, 0.45, 0.1]  # Reduce HOLD to 10%
         elif pair.startswith('USD'):  # USD vs other currencies
-            weights = [0.3, 0.4, 0.3]  # Slightly favor SELL
+            weights = [0.45, 0.45, 0.1]  # Reduce HOLD to 10%
         else:  # Cross pairs
-            weights = [0.25, 0.25, 0.5]  # Favor HOLD for cross pairs
+            weights = [0.4, 0.4, 0.2]  # Reduce HOLD to 20% for cross pairs
             
         signal_type = random.choices(signal_types, weights=weights)[0]
         
@@ -1040,11 +1040,11 @@ def generate_basic_signals(pair: str, current_price: float) -> Dict[str, Any]:
         volatility_factor = random.uniform(0.8, 1.2)
         confidence = confidence_base * volatility_factor
         
-        # Generate signal strength
+        # Generate signal strength (more decisive signals)
         if signal_type == 'HOLD':
-            signal_strength = random.uniform(-0.2, 0.2)
+            signal_strength = random.uniform(-0.15, 0.15)  # Tighter range for HOLD
         else:
-            signal_strength = random.uniform(0.4, 0.8) if signal_type == 'BUY' else random.uniform(-0.8, -0.4)
+            signal_strength = random.uniform(0.5, 0.9) if signal_type == 'BUY' else random.uniform(-0.9, -0.5)  # Stronger signals
         
         # Price volatility simulation
         price_volatility = random.uniform(0.5, 2.5)
