@@ -446,8 +446,8 @@ def get_forex_pairs():
                             if confidence_score >= 70:
                                 # Calculate REAL daily changes from historical data
                                 try:
-                                    # Get historical data to calculate real daily change
-                                    hist_data = data_fetcher.get_historical_data(pair, period='2d', interval='1d')
+                                    # Get historical data to calculate real daily change (5 years for better data availability)
+                                    hist_data = data_fetcher.get_historical_data(pair, period='5y', interval='1d')
                                     
                                     if hist_data is not None and len(hist_data) >= 2:
                                         # Get yesterday's close and calculate real change
@@ -671,7 +671,7 @@ def get_forex_data(pair):
     """Get historical data for a specific forex pair"""
     try:
         timeframe = request.args.get('timeframe', '1h')
-        period = request.args.get('period', '1mo')
+        period = request.args.get('period', '5y')  # Default to 5 years for better data availability
         
         # Fetch historical data
         data = data_fetcher.get_historical_data(pair, period, timeframe)
@@ -837,8 +837,8 @@ def get_technical_analysis(pair):
         is_crypto = pair.upper() in [p.upper() for p in CRYPTO_PAIRS]
         logger.info(f"Is crypto pair: {is_crypto}")
         
-        # Get historical data
-        data = data_fetcher.get_historical_data(pair, '3mo', timeframe)
+        # Get historical data (5 years for better data availability)
+        data = data_fetcher.get_historical_data(pair, '5y', timeframe)
         logger.info(f"Historical data available: {data is not None and not data.empty if data is not None else False}")
         
         if data is None or data.empty:
@@ -948,8 +948,8 @@ def get_trading_signals(pair):
     try:
         timeframe = request.args.get('timeframe', '1h')
         
-        # Get current market data
-        data = data_fetcher.get_historical_data(pair, '3mo', timeframe)
+        # Get current market data (5 years for better data availability and analysis)
+        data = data_fetcher.get_historical_data(pair, '5y', timeframe)
         
         # If we have sufficient historical data, use full signal generation with timeout
         if data is not None and not data.empty and len(data) >= 20:

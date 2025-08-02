@@ -743,7 +743,7 @@ class DataFetcher:
             logger.error(f"Error trying free APIs for {pair}: {e}")
             return None
     
-    def get_historical_data(self, pair: str, period: str = '1mo', interval: str = '1h') -> Optional[pd.DataFrame]:
+    def get_historical_data(self, pair: str, period: str = '5y', interval: str = '1h') -> Optional[pd.DataFrame]:
         """
         Get historical data for a forex pair with improved fallback system
         
@@ -790,13 +790,13 @@ class DataFetcher:
             logger.error(f"Error fetching historical data for {pair}: {e}")
             return None
     
-    def _generate_realistic_historical_data(self, pair: str, period: str = '1mo', interval: str = '1h') -> pd.DataFrame:
+    def _generate_realistic_historical_data(self, pair: str, period: str = '5y', interval: str = '1h') -> pd.DataFrame:
         """Generate realistic historical forex data"""
         try:
-            # Convert period to number of data points (reduced to prevent memory issues)
+            # Convert period to number of data points (optimized for 5-year period)
             period_map = {
                 '1d': 24, '5d': 120, '1mo': 100, '3mo': 200, 
-                '6mo': 300, '1y': 400, '2y': 500
+                '6mo': 300, '1y': 400, '2y': 500, '5y': 1000  # Added 5-year support
             }
             
             # Convert interval to hours
