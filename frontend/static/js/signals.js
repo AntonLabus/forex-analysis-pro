@@ -104,9 +104,10 @@ class SignalManager {
             }
             // Rate limiting
             await this.waitForRateLimit();
+            const marketTypeParam = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? `market_type=${MARKET_TYPE}&` : '';
             const url = pair ? 
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?timeframe=${this.currentTimeframe}` :
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?timeframe=${this.currentTimeframe}`;
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?${marketTypeParam}timeframe=${this.currentTimeframe}` :
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?${marketTypeParam}timeframe=${this.currentTimeframe}`;
             const response = await Utils.request(url);
             if (response.success) {
                 if (pair) {
@@ -133,6 +134,22 @@ class SignalManager {
             console.error('Error fetching signals:', error);
             Utils.showNotification('Failed to fetch signals', 'error');
             throw error;
+        }
+    }
+
+    /**
+     * Load signals for current market type
+     */
+    async loadSignals() {
+        try {
+            console.log(`Loading signals for market type: ${typeof MARKET_TYPE !== 'undefined' ? MARKET_TYPE : 'forex'}`);
+            // Clear existing signals cache when switching market types
+            this.signalCache.clear();
+            this.cacheExpiry.clear();
+            
+            await this.fetchSignals();
+        } catch (error) {
+            console.error('Error loading signals:', error);
         }
     }
 

@@ -40,6 +40,10 @@ class HomePage {
             this.initTheme();
             console.log('Theme initialized');
             
+            // Initialize market type buttons
+            this.initMarketType();
+            console.log('Market type initialized');
+            
             // Load initial data
             console.log('Loading featured pair data...');
             await this.loadFeaturedPairData();
@@ -92,6 +96,12 @@ class HomePage {
                 icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
             }
         }
+    }
+
+    initMarketType() {
+        // Set initial market type (forex is default)
+        setMarketType('forex');
+        console.log('Market type initialized to forex');
     }
 
     setupEventListeners() {
@@ -152,9 +162,12 @@ class HomePage {
             console.log('Loading featured pair data with enhanced debugging...');
             const apiUrl = window.CONFIG?.API_BASE_URL || 'https://forex-analysis-pro.onrender.com';
             
+            // Set featured pair based on market type
+            this.featuredPair = MARKET_TYPE === 'crypto' ? 'BTCUSD' : 'EURUSD';
+            
             // Fetch current price data with detailed logging
-            console.log('Fetching from API:', `${apiUrl}/api/forex/pairs`);
-            const response = await fetch(`${apiUrl}/api/forex/pairs`);
+            console.log('Fetching from API:', `${apiUrl}/api/forex/pairs?market_type=${MARKET_TYPE}`);
+            const response = await fetch(`${apiUrl}/api/forex/pairs?market_type=${MARKET_TYPE}`);
             console.log('API Response status:', response.status);
             
             if (!response.ok) {
@@ -167,13 +180,13 @@ class HomePage {
             if (data.success && data.data) {
                 console.log('Number of pairs received:', data.data.length);
                 const pairData = data.data.find(pair => pair.symbol === this.featuredPair);
-                console.log('EUR/USD pair data:', pairData);
+                console.log(`${this.featuredPair} pair data:`, pairData);
                 
                 if (pairData) {
                     console.log('Current price from API:', pairData.current_price);
                     this.updateFeaturedPairDisplay(pairData);
                 } else {
-                    console.error('EURUSD pair not found in API response');
+                    console.error(`${this.featuredPair} pair not found in API response`);
                     this.showFallbackData();
                 }
             } else {
@@ -610,20 +623,20 @@ class HomePage {
         try {
             const apiUrl = window.CONFIG?.API_BASE_URL || 'http://localhost:5000';
 
-            // Load total signals
-            const signalsResponse = await fetch(`${apiUrl}/api/signals/all`);
+            // Load total signals with market type
+            const signalsResponse = await fetch(`${apiUrl}/api/signals/all?market_type=${MARKET_TYPE}`);
             const signalsData = await signalsResponse.json();
 
             if (signalsData.success) {
-                const totalSignals = signalsData.signals?.length || 0;
+                const totalSignals = Object.keys(signalsData.signals || {}).length;
                 const activeSignalsElement = document.getElementById('active-signals');
                 if (activeSignalsElement) {
                     activeSignalsElement.textContent = totalSignals;
                 }
             }
 
-            // Load data quality average
-            const pairsResponse = await fetch(`${apiUrl}/api/forex/pairs`);
+            // Load data quality average with market type
+            const pairsResponse = await fetch(`${apiUrl}/api/forex/pairs?market_type=${MARKET_TYPE}`);
             const pairsData = await pairsResponse.json();
 
             if (pairsData && pairsData.success && Array.isArray(pairsData.data)) {
