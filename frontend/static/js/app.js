@@ -30,6 +30,24 @@ function setMarketType(type) {
     
     console.log('Button states updated');
     
+    // Update dropdown options based on market type
+    updatePairDropdowns(type);
+    
+    // Clear existing currency data to force refresh
+    if (window.app && window.app.currencyData) {
+        console.log('Clearing existing currency data');
+        window.app.currencyData.clear();
+        
+        // Show loading state immediately
+        const grid = document.getElementById('currency-grid');
+        if (grid) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>Loading ${type} pairs...</p>
+            </div>`;
+        }
+    }
+    
     // Refresh all data with new market type
     if (window.app) {
         console.log('Calling app.refreshAllData()');
@@ -48,6 +66,65 @@ function setMarketType(type) {
     
     console.log('Market type set to:', type);
     console.log('=== setMarketType completed ===');
+}
+
+// Function to update pair dropdowns based on market type
+function updatePairDropdowns(marketType) {
+    console.log('Updating pair dropdowns for market type:', marketType);
+    
+    const forexPairs = [
+        { value: 'EURUSD', label: 'EUR/USD' },
+        { value: 'GBPUSD', label: 'GBP/USD' },
+        { value: 'USDJPY', label: 'USD/JPY' },
+        { value: 'USDCHF', label: 'USD/CHF' },
+        { value: 'AUDUSD', label: 'AUD/USD' },
+        { value: 'USDCAD', label: 'USD/CAD' },
+        { value: 'NZDUSD', label: 'NZD/USD' },
+        { value: 'EURGBP', label: 'EUR/GBP' }
+    ];
+    
+    const cryptoPairs = [
+        { value: 'BTCUSD', label: 'BTC/USD' },
+        { value: 'ETHUSD', label: 'ETH/USD' },
+        { value: 'BNBUSD', label: 'BNB/USD' },
+        { value: 'SOLUSD', label: 'SOL/USD' },
+        { value: 'XRPUSD', label: 'XRP/USD' },
+        { value: 'ADAUSD', label: 'ADA/USD' },
+        { value: 'DOGEUSD', label: 'DOGE/USD' },
+        { value: 'DOTUSD', label: 'DOT/USD' },
+        { value: 'LTCUSD', label: 'LTC/USD' },
+        { value: 'BCHUSD', label: 'BCH/USD' },
+        { value: 'AVAXUSD', label: 'AVAX/USD' },
+        { value: 'SHIBUSD', label: 'SHIB/USD' }
+    ];
+    
+    const pairs = marketType === 'crypto' ? cryptoPairs : forexPairs;
+    
+    // Update analysis pair dropdown
+    const analysisPairSelect = document.getElementById('analysis-pair');
+    if (analysisPairSelect) {
+        analysisPairSelect.innerHTML = '';
+        pairs.forEach(pair => {
+            const option = document.createElement('option');
+            option.value = pair.value;
+            option.textContent = pair.label;
+            analysisPairSelect.appendChild(option);
+        });
+        console.log('Updated analysis pair dropdown with', pairs.length, 'pairs');
+    }
+    
+    // Update signal pair filter dropdown
+    const signalPairFilter = document.getElementById('signal-pair-filter');
+    if (signalPairFilter) {
+        signalPairFilter.innerHTML = '<option value="">All Pairs</option>';
+        pairs.forEach(pair => {
+            const option = document.createElement('option');
+            option.value = pair.value;
+            option.textContent = pair.label;
+            signalPairFilter.appendChild(option);
+        });
+        console.log('Updated signal pair filter dropdown with', pairs.length, 'pairs');
+    }
 }
 
 // Ensure the function is available globally
@@ -654,11 +731,26 @@ class ForexAnalysisApp {
 
         grid.innerHTML = '';
 
-        CONFIG.CURRENCY_PAIRS.forEach(pairConfig => {
-            const pairData = this.currencyData.get(pairConfig.symbol);
+        // Use the actual fetched data instead of CONFIG.CURRENCY_PAIRS
+        console.log('Updating currency grid with', this.currencyData.size, 'pairs for market type:', MARKET_TYPE);
+        
+        this.currencyData.forEach((pairData, symbol) => {
+            // Create a simple config object for each pair
+            const pairConfig = {
+                symbol: symbol,
+                name: symbol.replace('USD', '/USD').replace('EUR', '/EUR').replace('GBP', '/GBP')
+            };
             const card = this.createCurrencyCard(pairConfig, pairData);
             grid.appendChild(card);
         });
+        
+        // If no data available, show message
+        if (this.currencyData.size === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>Loading ${MARKET_TYPE} pairs...</p>
+            </div>`;
+        }
     }
 
     /**
@@ -1408,18 +1500,19 @@ class ForexAnalysisApp {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Show alert to confirm page loaded
-    alert('Application loaded! Look for the bright red box with FOREX/CRYPTO buttons in the header!');
+    console.log('Application loading...');
     
     window.app = new ForexAnalysisApp();
     window.forexApp = window.app; // Keep both for compatibility
     window.chartManager = new ChartManager();
     window.signalManager = new SignalManager();
     
-    // Initialize market type to forex (default)
+    // Initialize market type to forex (default) and populate dropdowns
     setTimeout(() => {
-        setMarketType('forex');
-    }, 100);
+        updatePairDropdowns('forex'); // Populate dropdowns first
+        setMarketType('forex'); // Then set market type
+        console.log('Market type initialized, toggle buttons should be ready');
+    }, 500);
     
     console.log('Application initialized with chartManager:', !!window.chartManager);
     console.log('Application initialized with app:', !!window.app);
