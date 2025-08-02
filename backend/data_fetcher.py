@@ -56,6 +56,63 @@ class DataFetcher:
         self.emergency_mode = False
         self.emergency_mode_until = 0
         
+        # Yahoo Finance symbol mappings for forex and crypto pairs
+        self.yf_symbols = {
+            # Forex pairs
+            'EURUSD': 'EURUSD=X',
+            'GBPUSD': 'GBPUSD=X',
+            'USDJPY': 'USDJPY=X',
+            'USDCHF': 'USDCHF=X',
+            'AUDUSD': 'AUDUSD=X',
+            'USDCAD': 'USDCAD=X',
+            'NZDUSD': 'NZDUSD=X',
+            'EURGBP': 'EURGBP=X',
+            # Crypto pairs
+            'BTCUSD': 'BTC-USD',
+            'ETHUSD': 'ETH-USD',
+            'BNBUSD': 'BNB-USD',
+            'SOLUSD': 'SOL-USD',
+            'XRPUSD': 'XRP-USD',
+            'ADAUSD': 'ADA-USD',
+            'DOGEUSD': 'DOGE-USD',
+            'DOTUSD': 'DOT-USD',
+            'LTCUSD': 'LTC-USD',
+            'BCHUSD': 'BCH-USD',
+            'AVAXUSD': 'AVAX-USD',
+            'SHIBUSD': 'SHIB-USD',
+            'TRXUSD': 'TRX-USD',
+            'LINKUSD': 'LINK-USD',
+            'MATICUSD': 'MATIC-USD',
+            'ATOMUSD': 'ATOM-USD',
+            'XMRUSD': 'XMR-USD',
+            'UNIUSD': 'UNI-USD',
+            'DAIUSD': 'DAI-USD',
+            'FILUSD': 'FIL-USD',
+            'APTUSD': 'APT-USD',
+            'ARBUSD': 'ARB-USD',
+            'OPUSD': 'OP-USD',
+            'PEPEUSD': 'PEPE-USD',
+            'WBTCUSD': 'WBTC-USD',
+            'TUSDUSD': 'TUSD-USD',
+            'FDUSDUSD': 'FDUSD-USD',
+            'XLMUSD': 'XLM-USD',
+            'ETCUSD': 'ETC-USD',
+            'HBARUSD': 'HBAR-USD',
+            'VETUSD': 'VET-USD'
+        }
+        
+        # Binance symbol mappings for crypto pairs
+        self.binance_symbols = {
+            'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
+            'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT'
+        }
+        
+        # CoinGecko ID mappings for crypto pairs  
+        self.coingecko_symbols = {
+            'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
+            'SOLUSD': 'solana', 'XRPUSD': 'ripple', 'ADAUSD': 'cardano'
+        }
+        
     def _is_circuit_breaker_open(self, api_name: str) -> bool:
         """Check if circuit breaker is open for an API"""
         if api_name not in self.api_errors:
@@ -180,31 +237,6 @@ class DataFetcher:
         self.request_timestamps = []  # Essential for rate limiting
         self.max_requests_per_window = 2  # DRASTICALLY reduced from 4 (emergency mode)
         self.rate_limit_window = 5  # Increased from 2 seconds (emergency mode)
-        
-        # Ensure all required attributes exist for production stability
-        if not hasattr(self, 'request_timestamps'):
-            self.request_timestamps = []
-        if not hasattr(self, 'max_requests_per_window'):
-            self.max_requests_per_window = 4
-        if not hasattr(self, 'rate_limit_window'):
-            self.rate_limit_window = 2
-        
-        # Ensure symbol mappings exist (critical for price fetching)
-        if not hasattr(self, 'coingecko_symbols'):
-            self.coingecko_symbols = {
-                'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
-                'SOLUSD': 'solana', 'XRPUSD': 'ripple', 'ADAUSD': 'cardano'
-            }
-        if not hasattr(self, 'binance_symbols'):
-            self.binance_symbols = {
-                'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
-                'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT'
-            }
-        if not hasattr(self, 'yf_symbols'):
-            self.yf_symbols = {
-                'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X', 'USDJPY': 'USDJPY=X',
-                'USDCHF': 'USDCHF=X', 'AUDUSD': 'AUDUSD=X', 'USDCAD': 'USDCAD=X'
-            }
         
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
