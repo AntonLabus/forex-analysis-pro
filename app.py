@@ -1018,8 +1018,9 @@ def generate_basic_signals(pair: str, current_price: float) -> Dict[str, Any]:
         import random
         import hashlib
         
-        # Use pair name to seed random for consistent but varied signals per pair
-        seed = int(hashlib.md5(pair.encode()).hexdigest()[:8], 16)
+        # Use pair name + current hour to seed random for varied signals that change over time
+        current_hour = datetime.now().hour
+        seed = int(hashlib.md5(f"{pair}_{current_hour}".encode()).hexdigest()[:8], 16)
         random.seed(seed)
         
         # Generate varied confidence and signal types based on pair
