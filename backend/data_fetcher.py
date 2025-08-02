@@ -49,8 +49,12 @@ class DataFetcher:
             'binance': {'count': 0, 'last_error': 0},
             'yahoo': {'count': 0, 'last_error': 0}
         }
-        self.circuit_breaker_threshold = 2  # Disable API after 2 consecutive errors
-        self.circuit_breaker_timeout = 1800  # 30 minutes before retry
+        self.circuit_breaker_threshold = 1  # Disable API after just 1 error (emergency mode)
+        self.circuit_breaker_timeout = 3600  # 1 hour before retry (emergency mode)
+        
+        # Emergency mode - completely stop API calls when overwhelmed
+        self.emergency_mode = False
+        self.emergency_mode_until = 0
         
     def _is_circuit_breaker_open(self, api_name: str) -> bool:
         """Check if circuit breaker is open for an API"""
@@ -76,6 +80,35 @@ class DataFetcher:
             self.api_errors[api_name]['count'] += 1
             self.api_errors[api_name]['last_error'] = time.time()
             logger.warning(f"API error recorded for {api_name}: {self.api_errors[api_name]['count']} errors")
+            
+            # Check if we should activate emergency mode
+            self._check_emergency_mode()
+    
+    def _check_emergency_mode(self):
+        """Check if all APIs are failing and activate emergency mode"""
+        current_time = time.time()
+        all_apis_failing = True
+        
+        for api_name, error_info in self.api_errors.items():
+            if error_info['count'] < self.circuit_breaker_threshold:
+                all_apis_failing = False
+                break
+            if current_time - error_info['last_error'] > self.circuit_breaker_timeout:
+                all_apis_failing = False
+                break
+        
+        if all_apis_failing and not self.emergency_mode:
+            self.emergency_mode = True
+            self.emergency_mode_until = current_time + 3600  # 1 hour emergency mode
+            logger.error("🚨 EMERGENCY MODE ACTIVATED - All APIs failing, stopping all requests for 1 hour")
+        
+        # Check if emergency mode should be disabled
+        if self.emergency_mode and current_time > self.emergency_mode_until:
+            self.emergency_mode = False
+            # Reset all error counts
+            for error_info in self.api_errors.values():
+                error_info['count'] = 0
+            logger.info("✅ Emergency mode deactivated - resetting all API error counts")
     
     def _record_api_success(self, api_name: str):
         """Record an API success to reset error count"""
@@ -93,12 +126,12 @@ class DataFetcher:
             'binance': 8.0  # MASSIVE delay - increased from 5.0 to prevent 451 errors
         }
         
-        # MAXIMUM conservative legacy rate limiting
+        # MAXIMUM conservative legacy rate limiting  
         self.last_request_time = {}
-        self.rate_limit_delay = 5.0  # MASSIVE delay - increased from 3.0
+        self.rate_limit_delay = 10.0  # EXTREME delay - increased from 5.0 (emergency mode)
         self.request_timestamps = []  # Essential for rate limiting
-        self.max_requests_per_window = 4  # Reduced from 8 (was 10)
-        self.rate_limit_window = 2  # Increased from 1 second
+        self.max_requests_per_window = 2  # DRASTICALLY reduced from 4 (emergency mode)
+        self.rate_limit_window = 5  # Increased from 2 seconds (emergency mode)
         
         # Ensure all required attributes exist for production stability
         if not hasattr(self, 'request_timestamps'):
@@ -837,6 +870,10 @@ class DataFetcher:
                 return None
                 
         except requests.RequestException as e:
+            if "429" in str(e):  # Too Many Requests
+                logger.error(f"CoinGecko 429 error - activating emergency mode for {pair}: {e}")
+                self.emergency_mode = True
+                self.emergency_mode_until = time.time() + 3600
             logger.error(f"Network error fetching from CoinGecko for {pair}: {e}")
             self._record_api_error('coingecko')
             return None
@@ -886,6 +923,10 @@ class DataFetcher:
                 return None
                 
         except requests.RequestException as e:
+            if "429" in str(e) or "451" in str(e):  # Too Many Requests or Unavailable for Legal Reasons
+                logger.error(f"Binance rate limit error - activating emergency mode for {pair}: {e}")
+                self.emergency_mode = True
+                self.emergency_mode_until = time.time() + 3600
             logger.error(f"Network error fetching from Binance for {pair}: {e}")
             self._record_api_error('binance')
             return None
@@ -1011,6 +1052,15 @@ class DataFetcher:
             Current price as float or None if all sources fail
         """
         try:
+            # Emergency mode check - return None immediately if in emergency mode
+            if hasattr(self, 'emergency_mode') and self.emergency_mode:
+                logger.warning(f"🚨 Emergency mode active - skipping API calls for {pair}")
+                return None
+            
+            # Check emergency mode activation
+            if hasattr(self, '_check_emergency_mode'):
+                self._check_emergency_mode()
+            
             # Check cache first (2-minute cache for current prices to reduce API calls)
             cache_key = f"current_price_{pair}"
             if (cache_key in self.cache and 
