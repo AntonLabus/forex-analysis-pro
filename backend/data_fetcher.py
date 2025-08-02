@@ -108,6 +108,23 @@ class DataFetcher:
         if not hasattr(self, 'rate_limit_window'):
             self.rate_limit_window = 2
         
+        # Ensure symbol mappings exist (critical for price fetching)
+        if not hasattr(self, 'coingecko_symbols'):
+            self.coingecko_symbols = {
+                'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
+                'SOLUSD': 'solana', 'XRPUSD': 'ripple', 'ADAUSD': 'cardano'
+            }
+        if not hasattr(self, 'binance_symbols'):
+            self.binance_symbols = {
+                'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
+                'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT'
+            }
+        if not hasattr(self, 'yf_symbols'):
+            self.yf_symbols = {
+                'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X', 'USDJPY': 'USDJPY=X',
+                'USDCHF': 'USDCHF=X', 'AUDUSD': 'AUDUSD=X', 'USDCAD': 'USDCAD=X'
+            }
+        
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
             'EURUSD': 'EURUSD=X',
@@ -765,12 +782,30 @@ class DataFetcher:
         return {}
     
     def _is_crypto_pair(self, pair: str) -> bool:
-        """Check if a pair is a cryptocurrency pair"""
+        """Check if a pair is a cryptocurrency pair with safety checks"""
+        # Ensure symbol mappings exist
+        if not hasattr(self, 'coingecko_symbols'):
+            self.coingecko_symbols = {
+                'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
+                'SOLUSD': 'solana', 'XRPUSD': 'ripple', 'ADAUSD': 'cardano'
+            }
+        if not hasattr(self, 'binance_symbols'):
+            self.binance_symbols = {
+                'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
+                'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT'
+            }
         return pair in self.coingecko_symbols or pair in self.binance_symbols
     
     def _fetch_coingecko_price(self, pair: str) -> Optional[float]:
         """Fetch current price from CoinGecko API with circuit breaker"""
         try:
+            # Ensure symbol mapping exists
+            if not hasattr(self, 'coingecko_symbols'):
+                self.coingecko_symbols = {
+                    'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
+                    'SOLUSD': 'solana', 'XRPUSD': 'ripple', 'ADAUSD': 'cardano'
+                }
+            
             if pair not in self.coingecko_symbols:
                 return None
             
@@ -813,6 +848,13 @@ class DataFetcher:
     def _fetch_binance_price(self, pair: str) -> Optional[float]:
         """Fetch current price from Binance API with circuit breaker"""
         try:
+            # Ensure symbol mapping exists
+            if not hasattr(self, 'binance_symbols'):
+                self.binance_symbols = {
+                    'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
+                    'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT'
+                }
+            
             if pair not in self.binance_symbols:
                 return None
             
