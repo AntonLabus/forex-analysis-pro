@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Signals Filtering</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px 20px; }
+    </style>
+</head>
+<body>
+    <h1>Signals Filtering Test</h1>
+    <p>This page tests the signal filtering functionality by market type.</p>
+    
+    <div>
+        <h2>Test Controls</h2>
+        <button onclick="testForexSignals()">Test Forex Signals</button>
+        <button onclick="testCryptoSignals()">Test Crypto Signals</button>
+        <button onclick="testMarketSwitch()">Test Market Switch</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        async function testForexSignals() {
+            log('Testing Forex signals...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/signals/all?market_type=forex`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const pairs = Object.keys(data.signals);
+                    const forexPairs = pairs.filter(p => !p.startsWith('BTC') && !p.startsWith('ETH') && !p.startsWith('BNB'));
+                    const cryptoPairs = pairs.filter(p => p.startsWith('BTC') || p.startsWith('ETH') || p.startsWith('BNB'));
+                    
+                    log(`✅ Forex test: ${forexPairs.length} forex pairs, ${cryptoPairs.length} crypto pairs`, 
+                        cryptoPairs.length === 0 ? 'success' : 'error');
+                    log(`Forex pairs found: ${forexPairs.join(', ')}`, 'info');
+                    if (cryptoPairs.length > 0) {
+                        log(`❌ Unexpected crypto pairs: ${cryptoPairs.join(', ')}`, 'error');
+                    }
+                } else {
+                    log(`❌ Forex test failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Forex test error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCryptoSignals() {
+            log('Testing Crypto signals...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/signals/all?market_type=crypto`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const pairs = Object.keys(data.signals);
+                    const forexPairs = pairs.filter(p => !p.startsWith('BTC') && !p.startsWith('ETH') && !p.startsWith('BNB') && !p.startsWith('SOL') && !p.startsWith('XRP') && !p.startsWith('ADA'));
+                    const cryptoPairs = pairs.filter(p => p.startsWith('BTC') || p.startsWith('ETH') || p.startsWith('BNB') || p.startsWith('SOL') || p.startsWith('XRP') || p.startsWith('ADA'));
+                    
+                    log(`✅ Crypto test: ${cryptoPairs.length} crypto pairs, ${forexPairs.length} forex pairs`, 
+                        forexPairs.length === 0 ? 'success' : 'error');
+                    log(`Crypto pairs found: ${cryptoPairs.join(', ')}`, 'info');
+                    if (forexPairs.length > 0) {
+                        log(`❌ Unexpected forex pairs: ${forexPairs.join(', ')}`, 'error');
+                    }
+                } else {
+                    log(`❌ Crypto test failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Crypto test error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testMarketSwitch() {
+            log('Testing market type switching...', 'info');
+            
+            // Test forex first
+            await testForexSignals();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Then test crypto
+            await testCryptoSignals();
+            
+            log('✅ Market switch test completed', 'success');
+        }
+        
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready to test signals filtering.', 'info');
+            setTimeout(testMarketSwitch, 1000);
+        });
+    </script>
+</body>
+</html>

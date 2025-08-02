@@ -110,6 +110,37 @@ class DataFetcher:
                 error_info['count'] = 0
             logger.info("✅ Emergency mode deactivated - resetting all API error counts")
     
+    def reset_emergency_mode(self):
+        """Manually reset emergency mode - use with caution"""
+        if self.emergency_mode:
+            self.emergency_mode = False
+            self.emergency_mode_until = 0
+            # Reset all error counts
+            for error_info in self.api_errors.values():
+                error_info['count'] = 0
+            logger.warning("🔧 Emergency mode MANUALLY RESET - all API error counts cleared")
+            return True
+        return False
+    
+    def get_emergency_mode_status(self):
+        """Get current emergency mode status and remaining time"""
+        if not self.emergency_mode:
+            return {
+                'active': False,
+                'remaining_time': 0,
+                'message': 'Emergency mode is not active'
+            }
+        
+        current_time = time.time()
+        remaining_time = max(0, self.emergency_mode_until - current_time)
+        
+        return {
+            'active': True,
+            'remaining_time': remaining_time,
+            'remaining_minutes': round(remaining_time / 60, 1),
+            'message': f'Emergency mode active for {round(remaining_time / 60, 1)} more minutes'
+        }
+    
     def _record_api_success(self, api_name: str):
         """Record an API success to reset error count"""
         if api_name in self.api_errors:

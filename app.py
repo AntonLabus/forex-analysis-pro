@@ -1219,6 +1219,48 @@ def get_system_health():
             'error': str(e)
         }), 500
 
+@app.route('/api/system/emergency-mode')
+def get_emergency_mode_status():
+    """Get current emergency mode status"""
+    try:
+        status = data_fetcher.get_emergency_mode_status()
+        return jsonify({
+            'success': True,
+            'emergency_mode': status,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting emergency mode status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/system/emergency-mode/reset', methods=['POST'])
+def reset_emergency_mode():
+    """Manually reset emergency mode - use with caution"""
+    try:
+        was_reset = data_fetcher.reset_emergency_mode()
+        if was_reset:
+            logger.warning("🔧 Emergency mode manually reset via API")
+            return jsonify({
+                'success': True,
+                'message': 'Emergency mode has been reset',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': 'Emergency mode was not active',
+                'timestamp': datetime.now().isoformat()
+            })
+    except Exception as e:
+        logger.error(f"Error resetting emergency mode: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 def broadcast_price_updates():
     """Background task to broadcast real-time price updates"""
     while True:
