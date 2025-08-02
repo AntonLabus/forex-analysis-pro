@@ -1036,60 +1036,10 @@ class DataFetcher:
                 return validated_price
             
             logger.error(f"All data sources failed for {pair}")
-                        # Try multiple Yahoo Finance methods
-                        hist = ticker.history(period="1d", interval="1m")
-                        if not hist.empty:
-                            return float(hist['Close'].iloc[-1])
-                        
-                        # Try info method as backup
-                        info = ticker.info
-                        current_price = info.get('regularMarketPrice') or info.get('price')
-                        if current_price:
-                            return float(current_price)
-                        return None
-                    
-                    # Execute with timeout
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(fetch_yahoo_data)
-                        try:
-                            price = future.result(timeout=5)  # 5 second timeout
-                            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Yahoo Finance')
-                            if validated_price:
-                                return validated_price
-                        except FutureTimeoutError:
-                            logger.warning(f"Yahoo Finance timeout for {pair}")
-                        
-                except Exception as e:
-                    if "429" in str(e) or "Too Many Requests" in str(e):
-                        logger.warning(f"Yahoo Finance rate limited for {pair}: {e}")
-                        # Increase delay more aggressively for future requests
-                        self.rate_limit_delay = min(5.0, self.rate_limit_delay * 2.0)
-                        logger.info(f"Increased rate limit delay to {self.rate_limit_delay}s")
-                    else:
-                        logger.warning(f"Yahoo Finance failed for {pair}: {e}")
-            
-            # Method 3: Alpha Vantage (if API key available and rate limit allows)
-            if self.alpha_vantage_key and self._check_rate_limit():
-                try:
-                    price = self._fetch_alpha_vantage_realtime(pair)
-                    validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Alpha Vantage')
-                    if validated_price:
-                        return validated_price
-                except Exception as e:
-                    logger.warning(f"Alpha Vantage failed for {pair}: {e}")
-            
-            # Method 4: Use fallback realistic prices if all APIs fail
-            logger.warning(f"All external sources failed for {pair}, using fallback data")
-            price = self._get_fallback_price(pair)
-            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Fallback', cache_time=10)
-            if validated_price:
-                return validated_price
-            
-            logger.error(f"All data sources failed for {pair}")
             return None
             
         except Exception as e:
-            logger.error(f"Critical error getting price for {pair}: {e}")
+            logger.error(f"Error getting current price for {pair}: {e}")
             return None
     
     def _validate_and_cache_price(self, pair: str, price: Optional[float], cache_key: str, 
