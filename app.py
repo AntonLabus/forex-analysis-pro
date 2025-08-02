@@ -302,15 +302,15 @@ def get_forex_pairs():
         
         # Adjust concurrency and timeout based on market type
         if market_type == 'crypto':
-            # Crypto APIs are more rate-limited, use fewer workers and longer timeout
-            max_workers = 2  # Reduced from 4 for crypto
-            request_timeout = 15  # Longer timeout for crypto APIs
-            logger.info("Using crypto-optimized settings: 2 workers, 15s timeout")
+            # Ultra-conservative crypto settings to prevent disconnections
+            max_workers = 1  # Reduced from 2 - process crypto pairs one at a time
+            request_timeout = 20  # Increased from 15s - longer timeout for crypto APIs
+            logger.info("Using ultra-conservative crypto settings: 1 worker, 20s timeout, 2s delays")
         else:
-            # Forex APIs can handle more concurrent requests
-            max_workers = 4
-            request_timeout = 10
-            logger.info("Using forex-optimized settings: 4 workers, 10s timeout")
+            # Forex APIs can handle slightly more concurrent requests
+            max_workers = 2  # Reduced from 4
+            request_timeout = 12  # Slightly increased from 10
+            logger.info("Using conservative forex settings: 2 workers, 12s timeout")
         
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -324,9 +324,9 @@ def get_forex_pairs():
                     pair_prices[pair] = current_price
                     completed_pairs += 1
                     
-                    # Add small delay between crypto requests to respect rate limits
+                    # Add longer delay between crypto requests to prevent rate limiting
                     if market_type == 'crypto' and completed_pairs < len(selected_pairs):
-                        time.sleep(0.5)  # 500ms delay between crypto requests
+                        time.sleep(2.0)  # Increased from 500ms to 2 seconds between crypto requests
                         
         except concurrent.futures.TimeoutError:
             logger.warning(f"Some {market_type} pairs timed out during concurrent fetch")
@@ -454,38 +454,7 @@ def get_forex_pairs():
                         successful_pairs += 1
                         logger.info(f"Data for {pair}: {current_price}")
                 else:
-                    logger.warning(f"No data available for {pair}")
-                    
-                    # Add fallback demo data for crypto pairs when APIs fail
-                    if market_type == 'crypto':
-                        fallback_prices = {
-                            'BTCUSD': 65000.0, 'ETHUSD': 3500.0, 'BNBUSD': 580.0, 'SOLUSD': 180.0,
-                            'XRPUSD': 0.55, 'ADAUSD': 0.45, 'DOGEUSD': 0.08, 'DOTUSD': 6.5,
-                            'LTCUSD': 85.0, 'AVAXUSD': 28.0, 'LINKUSD': 15.0, 'MATICUSD': 0.85
-                        }
-                        
-                        fallback_price = fallback_prices.get(pair)
-                        if fallback_price:
-                            # Add some realistic variation to fallback prices
-                            import random
-                            variation = random.uniform(-0.05, 0.05)  # ±5% variation
-                            fallback_price *= (1 + variation)
-                            
-                            pairs_data.append({
-                                'symbol': pair,
-                                'name': pair,
-                                'current_price': round(fallback_price, 5),
-                                'daily_change': round(fallback_price * random.uniform(-0.02, 0.02), 5),
-                                'daily_change_percent': round(random.uniform(-2.0, 2.0), 2),
-                                'last_updated': datetime.now().isoformat(),
-                                'data_quality': 'Demo',
-                                'confidence_score': 50,
-                                'validation_warnings': 1,
-                                'is_fallback': True
-                            })
-                            
-                            successful_pairs += 1
-                            logger.info(f"Using fallback data for {pair}: {fallback_price} (demo data)")
+                    logger.warning(f"No real market data available for {pair}")
                     
             except Exception as e:
                 logger.error(f"Error fetching {pair}: {e}")
@@ -493,47 +462,12 @@ def get_forex_pairs():
         # Return data even if some pairs failed, as long as we have at least some data
         if successful_pairs == 0:
             logger.error(f"No {endpoint_name} data available from any source")
-            
-            # For crypto, provide fallback data to ensure the app stays functional
-            if market_type == 'crypto':
-                logger.info("Providing complete fallback crypto data due to API failures")
-                fallback_crypto_data = [
-                    {'symbol': 'BTCUSD', 'name': 'BTCUSD', 'current_price': 65000.0, 'daily_change': 1250.0, 'daily_change_percent': 1.96},
-                    {'symbol': 'ETHUSD', 'name': 'ETHUSD', 'current_price': 3500.0, 'daily_change': -85.0, 'daily_change_percent': -2.38},
-                    {'symbol': 'BNBUSD', 'name': 'BNBUSD', 'current_price': 580.0, 'daily_change': 15.5, 'daily_change_percent': 2.74},
-                    {'symbol': 'SOLUSD', 'name': 'SOLUSD', 'current_price': 180.0, 'daily_change': -8.2, 'daily_change_percent': -4.36},
-                    {'symbol': 'XRPUSD', 'name': 'XRPUSD', 'current_price': 0.55, 'daily_change': 0.02, 'daily_change_percent': 3.77},
-                    {'symbol': 'ADAUSD', 'name': 'ADAUSD', 'current_price': 0.45, 'daily_change': -0.01, 'daily_change_percent': -2.17}
-                ]
-                
-                # Add metadata to fallback data
-                for item in fallback_crypto_data:
-                    item.update({
-                        'last_updated': datetime.now().isoformat(),
-                        'data_quality': 'Demo',
-                        'confidence_score': 50,
-                        'validation_warnings': 1,
-                        'is_fallback': True
-                    })
-                
-                response_data = {
-                    'success': True,
-                    'data': fallback_crypto_data,
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'Fallback demo data (API services temporarily unavailable)',
-                    'pairs_loaded': len(fallback_crypto_data),
-                    'total_pairs': len(selected_pairs),
-                    'market_type': market_type,
-                    'warning': 'Using demo data due to API rate limiting. Refresh in a few minutes for live data.'
-                }
-                
-                logger.info(f"Returning fallback {market_type} data with {len(fallback_crypto_data)} pairs")
-                return jsonify(response_data)
-            
             return jsonify({
                 'success': False, 
-                'error': f'No {endpoint_name} data currently available. The service may be experiencing high load. Please try again in a moment.',
-                'data': []
+                'error': f'No {endpoint_name} data currently available. All API sources are unavailable. Please try again later.',
+                'data': [],
+                'timestamp': datetime.now().isoformat(),
+                'market_type': market_type
             }), 503
         
         logger.info(f"Successfully fetched data for {successful_pairs}/{len(selected_pairs)} pairs")
@@ -774,39 +708,15 @@ def get_technical_analysis(pair):
         logger.info(f"Historical data available: {data is not None and not data.empty if data is not None else False}")
         
         if data is None or data.empty:
-            logger.warning(f"No historical data available for {pair}, providing demo analysis")
-            
-            # Generate basic demo technical analysis
-            demo_analysis = {
-                'indicators': {
-                    'rsi': {'value': 45.2, 'signal': 'neutral', 'description': 'RSI indicates neutral momentum'},
-                    'macd': {'value': 0.002, 'signal': 'bullish', 'description': 'MACD shows slight bullish divergence'},
-                    'sma_20': {'value': 65000.0 if is_crypto else 1.0800, 'signal': 'above', 'description': 'Price is above 20-period SMA'},
-                    'ema_12': {'value': 64800.0 if is_crypto else 1.0785, 'signal': 'above', 'description': 'Price is above 12-period EMA'},
-                    'bollinger_upper': {'value': 67000.0 if is_crypto else 1.0950, 'signal': 'resistance', 'description': 'Upper Bollinger Band resistance'},
-                    'bollinger_lower': {'value': 62000.0 if is_crypto else 1.0650, 'signal': 'support', 'description': 'Lower Bollinger Band support'}
-                },
-                'signals': {
-                    'trend': 'bullish',
-                    'strength': 'moderate',
-                    'confidence': 65,
-                    'recommendation': 'hold',
-                    'entry_price': 65000.0 if is_crypto else 1.0800,
-                    'stop_loss': 62000.0 if is_crypto else 1.0750,
-                    'take_profit': 68000.0 if is_crypto else 1.0900
-                },
-                'summary': f"Demo technical analysis for {pair}. Showing neutral to slightly bullish momentum.",
-                'data_source': 'demo'
-            }
-            
+            logger.warning(f"No historical data available for {pair}")
             return jsonify({
-                'success': True,
+                'success': False,
+                'error': f'No historical data available for {pair}. Technical analysis requires sufficient price history.',
                 'pair': pair,
                 'timeframe': timeframe,
-                'analysis': demo_analysis,
                 'timestamp': datetime.now().isoformat(),
-                'note': 'Demo analysis provided - historical data not available'
-            })
+                'message': 'Unable to perform technical analysis without real market data.'
+            }), 404
         
         # Standardize column names for technical analysis (expects lowercase)
         data.columns = [col.lower() for col in data.columns]
@@ -825,39 +735,13 @@ def get_technical_analysis(pair):
     except Exception as e:
         logger.error(f"Error in technical analysis for {pair}: {e}")
         logger.error(f"Exception details: {type(e).__name__}: {str(e)}")
-        
-        # Provide fallback demo analysis even on error
-        try:
-            is_crypto = pair.upper() in [p.upper() for p in CRYPTO_PAIRS]
-            fallback_analysis = {
-                'indicators': {
-                    'rsi': {'value': 50.0, 'signal': 'neutral', 'description': 'RSI neutral (demo)'},
-                    'trend': {'value': 'sideways', 'signal': 'neutral', 'description': 'Market trending sideways (demo)'}
-                },
-                'signals': {
-                    'trend': 'neutral',
-                    'strength': 'weak',
-                    'confidence': 40,
-                    'recommendation': 'wait',
-                    'entry_price': 65000.0 if is_crypto else 1.0800
-                },
-                'summary': f"Fallback analysis for {pair} due to technical error.",
-                'data_source': 'fallback',
-                'error': str(e)
-            }
-            
-            return jsonify({
-                'success': True,
-                'pair': pair,
-                'timeframe': timeframe or '1h',
-                'analysis': fallback_analysis,
-                'timestamp': datetime.now().isoformat(),
-                'warning': 'Fallback analysis provided due to error'
-            })
-            
-        except Exception as fallback_error:
-            logger.error(f"Even fallback analysis failed: {fallback_error}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': f'Technical analysis failed for {pair}: {str(e)}',
+            'pair': pair,
+            'timeframe': timeframe or '1h',
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/analysis/fundamental/<pair>')
 def get_fundamental_analysis(pair):

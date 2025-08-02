@@ -1,0 +1,6 @@
+@echo off
+echo Stopping any existing Python processes...
+taskkill /F /IM python.exe 2>nul
+echo Starting Forex Analysis Pro...
+cd /d "C:\Users\labus\OneDrive\Documents\GitHub\Forex"
+python start.py

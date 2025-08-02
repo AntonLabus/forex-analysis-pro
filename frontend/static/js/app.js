@@ -38,12 +38,24 @@ function setMarketType(type) {
         console.log('Clearing existing currency data');
         window.app.currencyData.clear();
         
+        // Clear any cached requests
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    if (name.includes('api')) {
+                        caches.delete(name);
+                    }
+                });
+            });
+        }
+        
         // Show loading state immediately
         const grid = document.getElementById('currency-grid');
         if (grid) {
             grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">
                 <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
                 <p>Loading ${type} pairs...</p>
+                <p style="font-size: 0.9em; color: #888;">Switching from ${MARKET_TYPE === 'forex' ? 'crypto' : 'forex'} to ${type}</p>
             </div>`;
         }
     }
@@ -52,6 +64,31 @@ function setMarketType(type) {
     if (window.app) {
         console.log('Calling app.refreshAllData()');
         window.app.refreshAllData();
+        
+        // Re-subscribe to WebSocket updates for new market type
+        if (window.app.socket && window.app.socket.connected) {
+            console.log('Re-subscribing to WebSocket for market type:', type);
+            window.app.subscribeToMarketUpdates();
+        }
+        
+        // Also refresh the analysis section if we're on that tab
+        const analysisSection = document.getElementById('analysis');
+        if (analysisSection && analysisSection.classList.contains('active')) {
+            console.log('Refreshing analysis section for new market type');
+            setTimeout(() => {
+                // Trigger analysis update for the first pair of new market type
+                const analysisPairSelect = document.getElementById('analysis-pair');
+                if (analysisPairSelect && analysisPairSelect.options.length > 0) {
+                    // Update chart title
+                    const chartTitle = document.getElementById('chart-title');
+                    if (chartTitle) {
+                        const selectedPair = analysisPairSelect.value;
+                        const selectedLabel = analysisPairSelect.options[analysisPairSelect.selectedIndex].text;
+                        chartTitle.textContent = `${selectedLabel} - 1 Hour Chart`;
+                    }
+                }
+            }, 100);
+        }
     } else {
         console.log('window.app not available');
     }
@@ -66,6 +103,78 @@ function setMarketType(type) {
     
     console.log('Market type set to:', type);
     console.log('=== setMarketType completed ===');
+}
+
+/**
+ * Test WebSocket connection function for debugging
+ */
+function testWebSocket() {
+    console.log('=== WEBSOCKET CONNECTION TEST ===');
+    
+    if (!window.app) {
+        console.log('❌ window.app not available');
+        alert('App not initialized');
+        return;
+    }
+    
+    if (!window.app.socket) {
+        console.log('❌ Socket not initialized');
+        alert('WebSocket not initialized');
+        return;
+    }
+    
+    console.log('Socket object:', window.app.socket);
+    console.log('Socket connected:', window.app.socket.connected);
+    console.log('Socket id:', window.app.socket.id);
+    console.log('Socket transport:', window.app.socket.io?.engine?.transport?.name);
+    
+    if (window.app.socket.connected) {
+        console.log('✅ WebSocket is connected!');
+        window.app.updateConnectionStatus(true, 'Connected (Test)');
+        alert('WebSocket is CONNECTED ✅');
+    } else {
+        console.log('❌ WebSocket is NOT connected');
+        window.app.updateConnectionStatus(false, 'Disconnected (Test)');
+        alert('WebSocket is DISCONNECTED ❌');
+        
+        // Try to reconnect
+        console.log('Attempting to reconnect...');
+        window.app.socket.connect();
+    }
+}
+
+/**
+ * Test API connection and crypto pairs
+ */
+function testCrypto() {
+    console.log('=== CRYPTO API TEST ===');
+    
+    // Test the API directly
+    const testUrl = `${CONFIG.API_BASE_URL}/api/forex/pairs?market_type=crypto&force_refresh=true&_t=${Date.now()}`;
+    console.log('Testing URL:', testUrl);
+    
+    fetch(testUrl)
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ API Response:', data);
+            console.log('Market type returned:', data.market_type);
+            console.log('Pairs count:', data.data?.length);
+            console.log('First few pairs:', data.data?.slice(0, 5).map(p => p.symbol));
+            
+            if (data.market_type === 'crypto') {
+                alert(`✅ SUCCESS: Got ${data.data?.length} crypto pairs!`);
+            } else {
+                alert(`❌ WRONG DATA: Got ${data.market_type} instead of crypto`);
+            }
+        })
+        .catch(error => {
+            console.error('❌ API Error:', error);
+            alert(`❌ API Error: ${error.message}`);
+        });
 }
 
 // Function to update pair dropdowns based on market type
@@ -124,6 +233,14 @@ function updatePairDropdowns(marketType) {
             signalPairFilter.appendChild(option);
         });
         console.log('Updated signal pair filter dropdown with', pairs.length, 'pairs');
+    }
+    
+    // Update chart title to reflect the first pair of the new market type
+    const chartTitle = document.getElementById('chart-title');
+    if (chartTitle && pairs.length > 0) {
+        const firstPair = pairs[0];
+        chartTitle.textContent = `${firstPair.label} - 1 Hour Chart`;
+        console.log('Updated chart title to:', firstPair.label);
     }
 }
 
@@ -404,43 +521,42 @@ class ForexAnalysisApp {
             // Start with fallback updates immediately, then try WebSocket
             this.startFallbackUpdates();
             
-            // More conservative WebSocket configuration for production
+            // Enhanced WebSocket configuration for real-time data
             this.socket = io(CONFIG.WEBSOCKET_URL, {
-                timeout: 10000,  // Shorter timeout
+                timeout: 20000,  // Longer timeout for connection
                 reconnection: true,
-                reconnectionAttempts: 3,  // Fewer attempts
-                reconnectionDelay: 5000,  // Longer delay between attempts
-                transports: ['polling'],  // Start with polling only
-                upgrade: false,  // Don't try to upgrade to websocket initially
-                forceNew: true
+                reconnectionAttempts: 10,  // More attempts
+                reconnectionDelay: 2000,  // Shorter delay between attempts
+                transports: ['websocket', 'polling'],  // Try WebSocket first, fallback to polling
+                upgrade: true,  // Allow upgrade to WebSocket
+                forceNew: true,
+                autoConnect: true
             });
 
             this.socket.on('connect', () => {
-                console.log('WebSocket connected successfully');
+                console.log('WebSocket connected successfully to:', CONFIG.WEBSOCKET_URL);
+                console.log('Transport used:', this.socket.io.engine.transport.name);
                 this.updateConnectionStatus(true);
                 
                 // Stop fallback updates since WebSocket is now connected
                 this.stopFallbackUpdates();
                 
-                // Subscribe to price updates for all pairs
-                if (CONFIG.CURRENCY_PAIRS) {
-                    CONFIG.CURRENCY_PAIRS.forEach(pair => {
-                        this.socket.emit('subscribe_pair', { pair: pair.symbol });
-                    });
-                }
+                // Subscribe to price updates for current market type
+                this.subscribeToMarketUpdates();
             });
 
             this.socket.on('disconnect', (reason) => {
-                console.log('WebSocket disconnected:', reason);
-                this.updateConnectionStatus(false);
+                console.warn('❌ WebSocket disconnected:', reason);
+                this.updateConnectionStatus(false, `Disconnected: ${reason}`);
                 
                 // Restart fallback updates when WebSocket disconnects
                 this.startFallbackUpdates();
             });
 
             this.socket.on('connect_error', (error) => {
-                console.warn('WebSocket connection error:', error);
-                this.updateConnectionStatus(false);
+                console.error('❌ WebSocket connection error:', error);
+                console.error('Error details:', error.message);
+                this.updateConnectionStatus(false, `Connection Error: ${error.message}`);
                 
                 // If WebSocket fails, continue with polling-only updates
                 if (!this.fallbackUpdateInterval) {
@@ -450,7 +566,9 @@ class ForexAnalysisApp {
 
             this.socket.on('reconnect', (attemptNumber) => {
                 console.log('WebSocket reconnected after', attemptNumber, 'attempts');
+                console.log('Transport used:', this.socket.io.engine.transport.name);
                 this.updateConnectionStatus(true);
+                this.subscribeToMarketUpdates();
             });
 
             this.socket.on('reconnect_error', (error) => {
@@ -467,6 +585,26 @@ class ForexAnalysisApp {
 
             this.socket.on('status', (data) => {
                 console.log('WebSocket status:', data.message);
+            });
+
+            this.socket.on('subscription_confirmed', (data) => {
+                console.log('Pair subscription confirmed:', data.pair);
+            });
+
+            this.socket.on('market_subscription_confirmed', (data) => {
+                console.log('Market subscription confirmed:', data.market_type);
+            });
+
+            // Add immediate connection test
+            this.socket.on('connect', () => {
+                console.log('✅ WebSocket connect event fired!');
+                // Force update the display to ensure it shows connected
+                setTimeout(() => {
+                    if (this.socket && this.socket.connected) {
+                        console.log('✅ Confirming connection status...');
+                        this.updateConnectionStatus(true);
+                    }
+                }, 100);
             });
 
             // Shorter timeout since we already started fallback updates
@@ -518,6 +656,36 @@ class ForexAnalysisApp {
             clearInterval(this.fallbackUpdateInterval);
             this.fallbackUpdateInterval = null;
             console.log('Fallback polling updates stopped');
+        }
+    }
+
+    /**
+     * Subscribe to price updates for current market type
+     */
+    subscribeToMarketUpdates() {
+        if (!this.socket || !this.socket.connected) {
+            console.warn('Cannot subscribe to market updates - socket not connected');
+            return;
+        }
+
+        console.log('Subscribing to price updates for market type:', MARKET_TYPE);
+        
+        // Subscribe to market type updates
+        this.socket.emit('subscribe_market', { market_type: MARKET_TYPE });
+        
+        // Also subscribe to specific pairs based on current market
+        if (MARKET_TYPE === 'crypto') {
+            // Subscribe to major crypto pairs
+            const cryptoPairs = ['BTCUSD', 'ETHUSD', 'ADAUSD', 'DOTUSD', 'LINKUSD'];
+            cryptoPairs.forEach(pair => {
+                this.socket.emit('subscribe_pair', { pair: pair });
+            });
+        } else {
+            // Subscribe to major forex pairs
+            const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD'];
+            forexPairs.forEach(pair => {
+                this.socket.emit('subscribe_pair', { pair: pair });
+            });
         }
     }
 
@@ -693,14 +861,24 @@ class ForexAnalysisApp {
      */
     async loadCurrencyPairs() {
         try {
-            const apiUrl = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}?market_type=${MARKET_TYPE}`;
+            const apiUrl = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}?market_type=${MARKET_TYPE}&force_refresh=true&_t=${Date.now()}`;
             console.log('Fetching currency pairs from:', apiUrl);
+            console.log('Current MARKET_TYPE:', MARKET_TYPE);
+            
             const response = await Utils.request(apiUrl);
             
             console.log('API Response:', response);
+            console.log('Response market_type:', response.market_type);
+            console.log('Response data length:', response.data?.length);
             
             if (response.success && response.data) {
-                console.log('Processing', response.data.length, 'currency pairs for market type:', MARKET_TYPE);
+                // Validate that we got the correct market type data
+                if (response.market_type !== MARKET_TYPE) {
+                    console.warn(`❌ Received ${response.market_type} data but requested ${MARKET_TYPE}!`);
+                    throw new Error(`Server returned ${response.market_type} data but ${MARKET_TYPE} was requested`);
+                }
+                
+                console.log('✅ Processing', response.data.length, 'currency pairs for market type:', MARKET_TYPE);
                 
                 // Clear existing data
                 this.currencyData.clear();
@@ -711,12 +889,12 @@ class ForexAnalysisApp {
                 
                 this.updateCurrencyGrid();
                 this.updateLastRefreshTime();
-                console.log('Currency pairs loaded successfully for', MARKET_TYPE);
+                console.log('✅ Currency pairs loaded successfully for', MARKET_TYPE);
             } else {
                 throw new Error(response.error || 'Failed to load currency pairs - invalid response structure');
             }
         } catch (error) {
-            console.error('Error loading currency pairs:', error);
+            console.error('❌ Error loading currency pairs:', error);
             Utils.showNotification(`Failed to load live ${MARKET_TYPE} data. Please check your connection.`, 'error');
             throw error;
         }

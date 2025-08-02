@@ -43,23 +43,23 @@ class DataFetcher:
         self.request_queue = []
         self.queue_processing = False
         
-        # Smart throttling
+        # Ultra-conservative throttling to prevent API disconnections
         self.throttle_delays = {
-            'yahoo_finance': 1.0,
-            'alpha_vantage': 2.0,  # More conservative for paid API
-            'exchangerate_api': 1.5,
-            'exchangerate_host': 0.5,
-            'fawaz_currency': 0.2,
-            'coingecko': 0.5,  # CoinGecko allows good free tier
-            'binance': 0.3  # Binance public API is fast
+            'yahoo_finance': 2.0,  # Increased from 1.0
+            'alpha_vantage': 5.0,  # Increased from 2.0 - paid API needs respect
+            'exchangerate_api': 3.0,  # Increased from 1.5
+            'exchangerate_host': 1.0,  # Increased from 0.5
+            'fawaz_currency': 0.5,  # Increased from 0.2
+            'coingecko': 4.0,  # Increased from 1.5 - CoinGecko is very strict
+            'binance': 3.0  # Increased from 1.0 - Binance can ban IPs
         }
         
-        # Legacy rate limiting (keep for backward compatibility)
+        # Ultra-conservative legacy rate limiting
         self.last_request_time = {}
-        self.rate_limit_delay = 1.0
+        self.rate_limit_delay = 2.0  # Increased from 1.0
         self.request_timestamps = []
-        self.max_requests_per_window = 8  # Reduced from 10
-        self.rate_limit_window = 1
+        self.max_requests_per_window = 4  # Reduced from 8 (was 10)
+        self.rate_limit_window = 2  # Increased from 1 second
         
         # Yahoo Finance forex pair mapping
         self.yf_symbols = {
@@ -418,12 +418,15 @@ class DataFetcher:
         current_time = time.time()
         
         if api_name:
-            # API-specific rate limiting
+            # Ultra-conservative API rate limiting to prevent disconnections
             api_limits = {
-                'coingecko': {'hourly': 50, 'daily': 500},  # CoinGecko free tier
-                'binance': {'hourly': 1200, 'daily': 6000},  # Binance public API
-                'yahoo_finance': {'hourly': 200, 'daily': 2000},
-                'alpha_vantage': {'hourly': 5, 'daily': 25}  # Conservative for paid API
+                'coingecko': {'hourly': 10, 'daily': 50},  # Drastically reduced from 25/200
+                'binance': {'hourly': 30, 'daily': 200},  # Drastically reduced from 100/1000
+                'yahoo_finance': {'hourly': 50, 'daily': 500},  # Reduced from 200/2000
+                'alpha_vantage': {'hourly': 3, 'daily': 15},  # Reduced from 5/25
+                'exchangerate_api': {'hourly': 20, 'daily': 100},  # New conservative limit
+                'exchangerate_host': {'hourly': 30, 'daily': 200},  # New conservative limit
+                'fawaz_currency': {'hourly': 40, 'daily': 300}  # New conservative limit
             }
             
             if api_name in api_limits and api_name in self.api_request_counts:
@@ -563,31 +566,22 @@ class DataFetcher:
         """
         cache_key = f"{pair}_{period}_{interval}"
         
-        # Check cache first (cache for 5 minutes)
+        # Check cache first (cache for 15 minutes instead of 5)
         if cache_key in self.cache and cache_key in self.cache_expiry:
             if datetime.now() < self.cache_expiry[cache_key]:
                 logger.info(f"Returning cached data for {pair}")
                 return self.cache[cache_key]
 
-        # Generate realistic demo data as primary source
-        logger.info(f"Generating demo historical data for {pair}")
-        demo_data = self._generate_realistic_historical_data(pair, period, interval)
+        logger.info(f"Fetching real historical data for {pair}")
         
-        if demo_data is not None and not demo_data.empty:
-            # Cache the data
-            self.cache[cache_key] = demo_data
-            self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=5)
-            logger.info(f"Generated {len(demo_data)} rows of demo data for {pair}")
-            return demo_data
-
         try:
             # Try Yahoo Finance as fallback (with rate limiting)
             if self._check_rate_limit():
                 data = self._fetch_yfinance_data(pair, period, interval)
                 if data is not None and not data.empty:
-                    # Cache the data
+                    # Cache the data for 15 minutes
                     self.cache[cache_key] = data
-                    self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=5)
+                    self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
                     return data
             
             # Fallback to Alpha Vantage if available (with rate limiting)
@@ -595,10 +589,10 @@ class DataFetcher:
                 data = self._fetch_alpha_vantage_data(pair, interval)
                 if data is not None and not data.empty:
                     self.cache[cache_key] = data
-                    self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=5)
+                    self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
                     return data
             
-            logger.warning(f"No data available for {pair}")
+            logger.warning(f"No real historical data available for {pair}")
             return None
             
         except Exception as e:
@@ -1028,14 +1022,7 @@ class DataFetcher:
                     except Exception as e:
                         logger.warning(f"Alpha Vantage failed for {pair}: {e}")
             
-            # Method 4: Use fallback realistic prices if all APIs fail
-            logger.warning(f"All external sources failed for {pair}, using fallback data")
-            price = self._get_fallback_price(pair)
-            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Fallback', cache_time=10)
-            if validated_price:
-                return validated_price
-            
-            logger.error(f"All data sources failed for {pair}")
+            logger.error(f"All data sources failed for {pair} - no real market data available")
             return None
             
         except Exception as e:
@@ -1043,7 +1030,7 @@ class DataFetcher:
             return None
     
     def _validate_and_cache_price(self, pair: str, price: Optional[float], cache_key: str, 
-                                source: str, cache_time: int = 120) -> Optional[float]:
+                                source: str, cache_time: int = 600) -> Optional[float]:
         """
         Validate price data and cache if valid
         
