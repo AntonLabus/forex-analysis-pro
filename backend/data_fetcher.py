@@ -43,6 +43,45 @@ class DataFetcher:
         self.request_queue = []
         self.queue_processing = False
         
+        # Circuit breaker for APIs that are failing with 429/451 errors
+        self.api_errors = {
+            'coingecko': {'count': 0, 'last_error': 0},
+            'binance': {'count': 0, 'last_error': 0},
+            'yahoo': {'count': 0, 'last_error': 0}
+        }
+        self.circuit_breaker_threshold = 2  # Disable API after 2 consecutive errors
+        self.circuit_breaker_timeout = 1800  # 30 minutes before retry
+        
+    def _is_circuit_breaker_open(self, api_name: str) -> bool:
+        """Check if circuit breaker is open for an API"""
+        if api_name not in self.api_errors:
+            return False
+        
+        error_info = self.api_errors[api_name]
+        if error_info['count'] >= self.circuit_breaker_threshold:
+            # Check if timeout has passed
+            if time.time() - error_info['last_error'] < self.circuit_breaker_timeout:
+                logger.warning(f"Circuit breaker OPEN for {api_name} - too many errors")
+                return True
+            else:
+                # Reset circuit breaker
+                error_info['count'] = 0
+                logger.info(f"Circuit breaker RESET for {api_name}")
+                return False
+        return False
+    
+    def _record_api_error(self, api_name: str):
+        """Record an API error for circuit breaker"""
+        if api_name in self.api_errors:
+            self.api_errors[api_name]['count'] += 1
+            self.api_errors[api_name]['last_error'] = time.time()
+            logger.warning(f"API error recorded for {api_name}: {self.api_errors[api_name]['count']} errors")
+    
+    def _record_api_success(self, api_name: str):
+        """Record an API success to reset error count"""
+        if api_name in self.api_errors:
+            self.api_errors[api_name]['count'] = 0
+        
         # Ultra-conservative throttling to prevent API disconnections
         self.throttle_delays = {
             'yahoo_finance': 2.0,  # Increased from 1.0
@@ -50,13 +89,13 @@ class DataFetcher:
             'exchangerate_api': 3.0,  # Increased from 1.5
             'exchangerate_host': 1.0,  # Increased from 0.5
             'fawaz_currency': 0.5,  # Increased from 0.2
-            'coingecko': 6.0,  # Further increased from 4.0 to prevent 451 errors
-            'binance': 5.0  # Further increased from 3.0 to prevent 451 errors
+            'coingecko': 10.0,  # MASSIVE delay - increased from 6.0 to prevent 429 errors
+            'binance': 8.0  # MASSIVE delay - increased from 5.0 to prevent 451 errors
         }
         
-        # Extremely conservative legacy rate limiting
+        # MAXIMUM conservative legacy rate limiting
         self.last_request_time = {}
-        self.rate_limit_delay = 3.0  # Further increased from 2.0
+        self.rate_limit_delay = 5.0  # MASSIVE delay - increased from 3.0
         self.request_timestamps = []
         self.max_requests_per_window = 4  # Reduced from 8 (was 10)
         self.rate_limit_window = 2  # Increased from 1 second
@@ -418,15 +457,15 @@ class DataFetcher:
         current_time = time.time()
         
         if api_name:
-            # Extremely conservative API rate limiting to prevent 451 errors
+            # MAXIMUM conservative API rate limiting - virtually eliminate API calls
             api_limits = {
-                'coingecko': {'hourly': 5, 'daily': 25},   # Further reduced from 10/50
-                'binance': {'hourly': 15, 'daily': 100},  # Further reduced from 30/200
-                'yahoo_finance': {'hourly': 25, 'daily': 250},  # Further reduced from 50/500
-                'alpha_vantage': {'hourly': 2, 'daily': 10},  # Further reduced from 3/15
-                'exchangerate_api': {'hourly': 10, 'daily': 50},  # Further reduced from 20/100
-                'exchangerate_host': {'hourly': 15, 'daily': 100},  # Further reduced from 30/200
-                'fawaz_currency': {'hourly': 20, 'daily': 150}  # Further reduced from 40/300
+                'coingecko': {'hourly': 2, 'daily': 10},   # Reduced to bare minimum from 5/25
+                'binance': {'hourly': 5, 'daily': 25},    # Reduced to bare minimum from 15/100
+                'yahoo_finance': {'hourly': 10, 'daily': 50},  # Reduced from 25/250
+                'alpha_vantage': {'hourly': 1, 'daily': 5},    # Reduced to minimum from 2/10
+                'exchangerate_api': {'hourly': 5, 'daily': 25},    # Reduced from 10/50
+                'exchangerate_host': {'hourly': 5, 'daily': 25},   # Reduced from 15/100
+                'fawaz_currency': {'hourly': 10, 'daily': 50}      # Reduced from 20/150
             }
             
             if api_name in api_limits and api_name in self.api_request_counts:
@@ -708,9 +747,13 @@ class DataFetcher:
         return pair in self.coingecko_symbols or pair in self.binance_symbols
     
     def _fetch_coingecko_price(self, pair: str) -> Optional[float]:
-        """Fetch current price from CoinGecko API"""
+        """Fetch current price from CoinGecko API with circuit breaker"""
         try:
             if pair not in self.coingecko_symbols:
+                return None
+            
+            # Check circuit breaker first
+            if self._is_circuit_breaker_open('coingecko'):
                 return None
             
             if not self._check_rate_limit('coingecko'):
@@ -725,6 +768,7 @@ class DataFetcher:
             data = response.json()
             
             self._update_request_count('coingecko')
+            self._record_api_success('coingecko')  # Reset error count on success
             
             if symbol in data and 'usd' in data[symbol]:
                 price = float(data[symbol]['usd'])
@@ -732,19 +776,26 @@ class DataFetcher:
                 return price
             else:
                 logger.warning(f"No price data in CoinGecko response for {pair}")
+                self._record_api_error('coingecko')
                 return None
                 
         except requests.RequestException as e:
             logger.error(f"Network error fetching from CoinGecko for {pair}: {e}")
+            self._record_api_error('coingecko')
             return None
         except Exception as e:
             logger.error(f"Error fetching from CoinGecko for {pair}: {e}")
+            self._record_api_error('coingecko')
             return None
     
     def _fetch_binance_price(self, pair: str) -> Optional[float]:
-        """Fetch current price from Binance API"""
+        """Fetch current price from Binance API with circuit breaker"""
         try:
             if pair not in self.binance_symbols:
+                return None
+            
+            # Check circuit breaker first
+            if self._is_circuit_breaker_open('binance'):
                 return None
             
             if not self._check_rate_limit('binance'):
@@ -759,6 +810,7 @@ class DataFetcher:
             data = response.json()
             
             self._update_request_count('binance')
+            self._record_api_success('binance')  # Reset error count on success
             
             if 'price' in data:
                 price = float(data['price'])
@@ -766,13 +818,16 @@ class DataFetcher:
                 return price
             else:
                 logger.warning(f"No price data in Binance response for {pair}")
+                self._record_api_error('binance')
                 return None
                 
         except requests.RequestException as e:
             logger.error(f"Network error fetching from Binance for {pair}: {e}")
+            self._record_api_error('binance')
             return None
         except Exception as e:
             logger.error(f"Error fetching from Binance for {pair}: {e}")
+            self._record_api_error('binance')
             return None
     
     def _fetch_yfinance_data(self, pair: str, period: str, interval: str) -> Optional[pd.DataFrame]:
@@ -913,11 +968,11 @@ class DataFetcher:
             if not self._check_rate_limit():
                 self._wait_for_rate_limit()
             
-            # For crypto pairs, prioritize CoinGecko and Binance with extra delays
+            # For crypto pairs, prioritize CoinGecko and Binance with MASSIVE delays
             if self._is_crypto_pair(pair):
-                # Extra delay for crypto to prevent 451 errors
-                logger.info("Extra crypto delay: waiting 2 seconds...")
-                time.sleep(2.0)
+                # MASSIVE delay for crypto to prevent 429 errors
+                logger.info("MASSIVE crypto delay: waiting 5 seconds...")
+                time.sleep(5.0)
                 
                 # Method 1: CoinGecko for crypto
                 price = self._fetch_coingecko_price(pair)
@@ -925,10 +980,10 @@ class DataFetcher:
                 if validated_price:
                     return validated_price
                 
-                # Method 2: Binance for crypto (with extra delay)
+                # Method 2: Binance for crypto (with MASSIVE delay)
                 if not validated_price:
-                    logger.info("Extra Binance delay: waiting 2 seconds...")
-                    time.sleep(2.0)
+                    logger.info("MASSIVE Binance delay: waiting 5 seconds...")
+                    time.sleep(5.0)
                     price = self._fetch_binance_price(pair)
                     validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Binance')
                 if validated_price:
