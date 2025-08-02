@@ -50,13 +50,13 @@ class DataFetcher:
             'exchangerate_api': 3.0,  # Increased from 1.5
             'exchangerate_host': 1.0,  # Increased from 0.5
             'fawaz_currency': 0.5,  # Increased from 0.2
-            'coingecko': 4.0,  # Increased from 1.5 - CoinGecko is very strict
-            'binance': 3.0  # Increased from 1.0 - Binance can ban IPs
+            'coingecko': 6.0,  # Further increased from 4.0 to prevent 451 errors
+            'binance': 5.0  # Further increased from 3.0 to prevent 451 errors
         }
         
-        # Ultra-conservative legacy rate limiting
+        # Extremely conservative legacy rate limiting
         self.last_request_time = {}
-        self.rate_limit_delay = 2.0  # Increased from 1.0
+        self.rate_limit_delay = 3.0  # Further increased from 2.0
         self.request_timestamps = []
         self.max_requests_per_window = 4  # Reduced from 8 (was 10)
         self.rate_limit_window = 2  # Increased from 1 second
@@ -418,15 +418,15 @@ class DataFetcher:
         current_time = time.time()
         
         if api_name:
-            # Ultra-conservative API rate limiting to prevent disconnections
+            # Extremely conservative API rate limiting to prevent 451 errors
             api_limits = {
-                'coingecko': {'hourly': 10, 'daily': 50},  # Drastically reduced from 25/200
-                'binance': {'hourly': 30, 'daily': 200},  # Drastically reduced from 100/1000
-                'yahoo_finance': {'hourly': 50, 'daily': 500},  # Reduced from 200/2000
-                'alpha_vantage': {'hourly': 3, 'daily': 15},  # Reduced from 5/25
-                'exchangerate_api': {'hourly': 20, 'daily': 100},  # New conservative limit
-                'exchangerate_host': {'hourly': 30, 'daily': 200},  # New conservative limit
-                'fawaz_currency': {'hourly': 40, 'daily': 300}  # New conservative limit
+                'coingecko': {'hourly': 5, 'daily': 25},   # Further reduced from 10/50
+                'binance': {'hourly': 15, 'daily': 100},  # Further reduced from 30/200
+                'yahoo_finance': {'hourly': 25, 'daily': 250},  # Further reduced from 50/500
+                'alpha_vantage': {'hourly': 2, 'daily': 10},  # Further reduced from 3/15
+                'exchangerate_api': {'hourly': 10, 'daily': 50},  # Further reduced from 20/100
+                'exchangerate_host': {'hourly': 15, 'daily': 100},  # Further reduced from 30/200
+                'fawaz_currency': {'hourly': 20, 'daily': 150}  # Further reduced from 40/300
             }
             
             if api_name in api_limits and api_name in self.api_request_counts:
@@ -913,17 +913,24 @@ class DataFetcher:
             if not self._check_rate_limit():
                 self._wait_for_rate_limit()
             
-            # For crypto pairs, prioritize CoinGecko and Binance
+            # For crypto pairs, prioritize CoinGecko and Binance with extra delays
             if self._is_crypto_pair(pair):
+                # Extra delay for crypto to prevent 451 errors
+                logger.info("Extra crypto delay: waiting 2 seconds...")
+                time.sleep(2.0)
+                
                 # Method 1: CoinGecko for crypto
                 price = self._fetch_coingecko_price(pair)
                 validated_price = self._validate_and_cache_price(pair, price, cache_key, 'CoinGecko')
                 if validated_price:
                     return validated_price
                 
-                # Method 2: Binance for crypto
-                price = self._fetch_binance_price(pair)
-                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Binance')
+                # Method 2: Binance for crypto (with extra delay)
+                if not validated_price:
+                    logger.info("Extra Binance delay: waiting 2 seconds...")
+                    time.sleep(2.0)
+                    price = self._fetch_binance_price(pair)
+                    validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Binance')
                 if validated_price:
                     return validated_price
                 

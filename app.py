@@ -158,8 +158,7 @@ FOREX_PAIRS = [
 # Popular crypto pairs
 # Popular crypto pairs (reduced from 36 to 12 to prevent API rate limiting)
 CRYPTO_PAIRS = [
-    'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 
-    'DOGEUSD', 'DOTUSD', 'LTCUSD', 'AVAXUSD', 'LINKUSD', 'MATICUSD'
+    'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD'  # Reduced from 12 to 6 to prevent API overload
 ]
 
 @app.route('/')
