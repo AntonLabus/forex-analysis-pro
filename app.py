@@ -110,14 +110,8 @@ app.start_time = time.time()
 
 # Initialize extensions
 CORS(app, 
-     origins=[
-         "http://localhost:3000",
-         "http://localhost:5000",
-         "http://127.0.0.1:5000",
-         "https://forex-analysis-pro.netlify.app",
-         "https://forex-analysis-pro.onrender.com"
-     ],
-     supports_credentials=True,
+     origins="*",  # Allow all origins
+     supports_credentials=False,  # Must be false when origins is "*"
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
@@ -126,41 +120,20 @@ CORS(app,
 def after_request(response):
     """Ensure CORS headers are always present"""
     origin = request.headers.get('Origin')
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:5000", 
-        "http://127.0.0.1:5000",
-        "https://forex-analysis-pro.netlify.app",
-        "https://forex-analysis-pro.onrender.com"
-    ]
+    
+    # Allow all origins for production
+    response.headers['Access-Control-Allow-Origin'] = '*'
     
     # Log CORS request for debugging
-    logger.info(f"CORS request from origin: {origin}")
-    
-    if origin in allowed_origins:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        logger.info(f"CORS allowed for origin: {origin}")
-    else:
-        # For development, also allow localhost variants
-        if origin and ('localhost' in origin or '127.0.0.1' in origin):
-            response.headers['Access-Control-Allow-Origin'] = origin
-            logger.info(f"CORS allowed for localhost origin: {origin}")
-        else:
-            logger.warning(f"CORS denied for origin: {origin}")
+    logger.info(f"CORS request from origin: {origin} - ALLOWED (all origins)")
     
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With'
     response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Credentials'] = 'false'  # Must be false when origin is *
     return response
 
 socketio = SocketIO(app, 
-                   cors_allowed_origins=[
-                       "http://localhost:3000",
-                       "http://localhost:5000", 
-                       "http://127.0.0.1:5000",
-                       "https://forex-analysis-pro.netlify.app",
-                       "https://forex-analysis-pro.onrender.com"
-                   ],
+                   cors_allowed_origins="*",  # Allow all origins for Socket.IO
                    async_mode='threading',
                    engineio_logger=False,
                    logger=False,
