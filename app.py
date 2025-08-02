@@ -121,6 +121,38 @@ CORS(app,
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+# Additional CORS header enforcement
+@app.after_request
+def after_request(response):
+    """Ensure CORS headers are always present"""
+    origin = request.headers.get('Origin')
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:5000", 
+        "http://127.0.0.1:5000",
+        "https://forex-analysis-pro.netlify.app",
+        "https://forex-analysis-pro.onrender.com"
+    ]
+    
+    # Log CORS request for debugging
+    logger.info(f"CORS request from origin: {origin}")
+    
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        logger.info(f"CORS allowed for origin: {origin}")
+    else:
+        # For development, also allow localhost variants
+        if origin and ('localhost' in origin or '127.0.0.1' in origin):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            logger.info(f"CORS allowed for localhost origin: {origin}")
+        else:
+            logger.warning(f"CORS denied for origin: {origin}")
+    
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
 socketio = SocketIO(app, 
                    cors_allowed_origins=[
                        "http://localhost:3000",
@@ -158,8 +190,19 @@ FOREX_PAIRS = [
 # Popular crypto pairs
 # Popular crypto pairs (reduced from 36 to 12 to prevent API rate limiting)
 CRYPTO_PAIRS = [
-    'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD'  # Reduced from 12 to 6 to prevent API overload
+    'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD'  # Reduced from 6 to prevent API overload
 ]
+
+# Handle preflight OPTIONS requests
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
 @app.route('/')
 def home():
