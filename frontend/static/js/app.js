@@ -71,6 +71,21 @@ class ForexAnalysisApp {
      * Set up event listeners for UI interactions
      */
     setupEventListeners() {
+        // Listen for market type changes and refresh all views
+        const forexBtn = document.getElementById('forex-btn');
+        const cryptoBtn = document.getElementById('crypto-btn');
+        if (forexBtn) {
+            forexBtn.addEventListener('click', () => {
+                if (typeof setMarketType === 'function') setMarketType('forex');
+                this.refreshAllData();
+            });
+        }
+        if (cryptoBtn) {
+            cryptoBtn.addEventListener('click', () => {
+                if (typeof setMarketType === 'function') setMarketType('crypto');
+                this.refreshAllData();
+            });
+        }
         // Mobile menu toggle
         const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
         const navMenu = document.getElementById('nav-menu');

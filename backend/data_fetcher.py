@@ -34,7 +34,9 @@ class DataFetcher:
             'alpha_vantage': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
             'exchangerate_api': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
             'exchangerate_host': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
-            'fawaz_currency': {'hourly': 0, 'daily': 0, 'last_reset': time.time()}
+            'fawaz_currency': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'coingecko': {'hourly': 0, 'daily': 0, 'last_reset': time.time()},
+            'binance': {'hourly': 0, 'daily': 0, 'last_reset': time.time()}
         }
         
         # Request queue for rate limiting
@@ -47,7 +49,9 @@ class DataFetcher:
             'alpha_vantage': 2.0,  # More conservative for paid API
             'exchangerate_api': 1.5,
             'exchangerate_host': 0.5,
-            'fawaz_currency': 0.2
+            'fawaz_currency': 0.2,
+            'coingecko': 0.5,  # CoinGecko allows good free tier
+            'binance': 0.3  # Binance public API is fast
         }
         
         # Legacy rate limiting (keep for backward compatibility)
@@ -176,6 +180,117 @@ class DataFetcher:
             'RGTUSD': 'RGT-USD'
         }
         
+        # CoinGecko ID mapping for crypto pairs
+        self.coingecko_symbols = {
+            'BTCUSD': 'bitcoin',
+            'ETHUSD': 'ethereum',
+            'BNBUSD': 'binancecoin',
+            'SOLUSD': 'solana',
+            'XRPUSD': 'ripple',
+            'ADAUSD': 'cardano',
+            'DOGEUSD': 'dogecoin',
+            'DOTUSD': 'polkadot',
+            'LTCUSD': 'litecoin',
+            'BCHUSD': 'bitcoin-cash',
+            'AVAXUSD': 'avalanche-2',
+            'SHIBUSD': 'shiba-inu',
+            'TRXUSD': 'tron',
+            'LINKUSD': 'chainlink',
+            'MATICUSD': 'matic-network',
+            'ATOMUSD': 'cosmos',
+            'XMRUSD': 'monero',
+            'UNIUSD': 'uniswap',
+            'DAIUSD': 'dai',
+            'FILUSD': 'filecoin',
+            'APTUSD': 'aptos',
+            'ARBUSD': 'arbitrum',
+            'OPUSD': 'optimism',
+            'PEPEUSD': 'pepe',
+            'WBTCUSD': 'wrapped-bitcoin',
+            'TUSDUSD': 'true-usd',
+            'XLMUSD': 'stellar',
+            'ETCUSD': 'ethereum-classic',
+            'HBARUSD': 'hedera-hashgraph',
+            'VETUSD': 'vechain',
+            'ICPUSD': 'internet-computer',
+            'LDOUSD': 'lido-dao',
+            'CROUSD': 'crypto-com-chain',
+            'QNTUSD': 'quant-network',
+            'GRTUSD': 'the-graph',
+            'MKRUSD': 'maker',
+            'ALGOUSD': 'algorand',
+            'SANDUSD': 'the-sandbox',
+            'EGLDUSD': 'elrond-erd-2',
+            'AAVEUSD': 'aave',
+            'STXUSD': 'blockstack',
+            'MINAUSD': 'mina-protocol',
+            'CFXUSD': 'conflux-token',
+            'SUIUSD': 'sui',
+            'DASHUSD': 'dash',
+            'ZECUSD': 'zcash',
+            'CAKEUSD': 'pancakeswap-token',
+            'GMXUSD': 'gmx',
+            'MANAUSD': 'decentraland',
+            'CHZUSD': 'chiliz',
+            'ENJUSD': 'enjincoin',
+            'GALAUSD': 'gala',
+            'AXSUSD': 'axie-infinity'
+        }
+        
+        # Binance symbol mapping for crypto pairs
+        self.binance_symbols = {
+            'BTCUSD': 'BTCUSDT',
+            'ETHUSD': 'ETHUSDT',
+            'BNBUSD': 'BNBUSDT',
+            'SOLUSD': 'SOLUSDT',
+            'XRPUSD': 'XRPUSDT',
+            'ADAUSD': 'ADAUSDT',
+            'DOGEUSD': 'DOGEUSDT',
+            'DOTUSD': 'DOTUSDT',
+            'LTCUSD': 'LTCUSDT',
+            'BCHUSD': 'BCHUSDT',
+            'AVAXUSD': 'AVAXUSDT',
+            'SHIBUSD': 'SHIBUSDT',
+            'TRXUSD': 'TRXUSDT',
+            'LINKUSD': 'LINKUSDT',
+            'MATICUSD': 'MATICUSDT',
+            'ATOMUSD': 'ATOMUSDT',
+            'XMRUSD': 'XMRUSDT',
+            'UNIUSD': 'UNIUSDT',
+            'FILUSD': 'FILUSDT',
+            'APTUSD': 'APTUSDT',
+            'ARBUSD': 'ARBUSDT',
+            'OPUSD': 'OPUSDT',
+            'PEPEUSD': 'PEPEUSDT',
+            'XLMUSD': 'XLMUSDT',
+            'ETCUSD': 'ETCUSDT',
+            'HBARUSD': 'HBARUSDT',
+            'VETUSD': 'VETUSDT',
+            'ICPUSD': 'ICPUSDT',
+            'LDOUSD': 'LDOUSDT',
+            'CROUSD': 'CROUSDT',
+            'QNTUSD': 'QNTUSDT',
+            'GRTUSD': 'GRTUSDT',
+            'MKRUSD': 'MKRUSDT',
+            'ALGOUSD': 'ALGOUSDT',
+            'SANDUSD': 'SANDUSDT',
+            'EGLDUSD': 'EGLDUSDT',
+            'AAVEUSD': 'AAVEUSDT',
+            'STXUSD': 'STXUSDT',
+            'MINAUSD': 'MINAUSDT',
+            'CFXUSD': 'CFXUSDT',
+            'SUIUSD': 'SUIUSDT',
+            'DASHUSD': 'DASHUSDT',
+            'ZECUSD': 'ZECUSDT',
+            'CAKEUSD': 'CAKEUSDT',
+            'GMXUSD': 'GMXUSDT',
+            'MANAUSD': 'MANAUSDT',
+            'CHZUSD': 'CHZUSDT',
+            'ENJUSD': 'ENJUSDT',
+            'GALAUSD': 'GALAUSDT',
+            'AXSUSD': 'AXSUSDT'
+        }
+        
         # Free API endpoints for current rates
         self.free_apis = [
             {
@@ -293,7 +408,7 @@ class DataFetcher:
         
         logger.debug(f"Cached {cache_key} for {timeout} seconds")
     
-    def _check_rate_limit(self) -> bool:
+    def _check_rate_limit(self, api_name: str = None) -> bool:
         """
         Check if we can make a request based on rate limiting (10 requests per 1 second)
         Returns True if request is allowed, False if rate limited
@@ -302,6 +417,35 @@ class DataFetcher:
         
         current_time = time.time()
         
+        if api_name:
+            # API-specific rate limiting
+            api_limits = {
+                'coingecko': {'hourly': 50, 'daily': 500},  # CoinGecko free tier
+                'binance': {'hourly': 1200, 'daily': 6000},  # Binance public API
+                'yahoo_finance': {'hourly': 200, 'daily': 2000},
+                'alpha_vantage': {'hourly': 5, 'daily': 25}  # Conservative for paid API
+            }
+            
+            if api_name in api_limits and api_name in self.api_request_counts:
+                limits = api_limits[api_name]
+                counts = self.api_request_counts[api_name]
+                
+                # Reset counters if more than an hour has passed
+                if current_time - counts['last_reset'] > 3600:
+                    counts['hourly'] = 0
+                    counts['last_reset'] = current_time
+                
+                # Reset daily counters if more than 24 hours
+                if current_time - counts['last_reset'] > 86400:
+                    counts['daily'] = 0
+                
+                # Check limits
+                if counts['hourly'] >= limits['hourly'] or counts['daily'] >= limits['daily']:
+                    return False
+                
+                return True
+        
+        # General rate limiting (fallback)
         # Remove timestamps older than the rate limit window
         self.request_timestamps = [
             timestamp for timestamp in self.request_timestamps 
@@ -321,6 +465,14 @@ class DataFetcher:
         self.request_timestamps.append(current_time)
         logger.info(f"Rate limit check: {len(self.request_timestamps)}/{self.max_requests_per_window} requests in last 1s")
         return True
+    
+    def _update_request_count(self, api_name: str) -> None:
+        """Update request count for API-specific rate limiting"""
+        if api_name in self.api_request_counts:
+            counts = self.api_request_counts[api_name]
+            counts['hourly'] += 1
+            counts['daily'] += 1
+            logger.debug(f"Updated {api_name} request count: {counts['hourly']}/hour, {counts['daily']}/day")
     
     def _wait_for_rate_limit(self) -> None:
         """Wait if necessary to respect rate limiting"""
@@ -557,6 +709,78 @@ class DataFetcher:
             return data['usd']
         return {}
     
+    def _is_crypto_pair(self, pair: str) -> bool:
+        """Check if a pair is a cryptocurrency pair"""
+        return pair in self.coingecko_symbols or pair in self.binance_symbols
+    
+    def _fetch_coingecko_price(self, pair: str) -> Optional[float]:
+        """Fetch current price from CoinGecko API"""
+        try:
+            if pair not in self.coingecko_symbols:
+                return None
+            
+            if not self._check_rate_limit('coingecko'):
+                logger.warning("CoinGecko rate limit exceeded")
+                return None
+            
+            symbol = self.coingecko_symbols[pair]
+            url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
+            
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            self._update_request_count('coingecko')
+            
+            if symbol in data and 'usd' in data[symbol]:
+                price = float(data[symbol]['usd'])
+                logger.info(f"CoinGecko price for {pair}: {price}")
+                return price
+            else:
+                logger.warning(f"No price data in CoinGecko response for {pair}")
+                return None
+                
+        except requests.RequestException as e:
+            logger.error(f"Network error fetching from CoinGecko for {pair}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching from CoinGecko for {pair}: {e}")
+            return None
+    
+    def _fetch_binance_price(self, pair: str) -> Optional[float]:
+        """Fetch current price from Binance API"""
+        try:
+            if pair not in self.binance_symbols:
+                return None
+            
+            if not self._check_rate_limit('binance'):
+                logger.warning("Binance rate limit exceeded")
+                return None
+            
+            symbol = self.binance_symbols[pair]
+            url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+            
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            self._update_request_count('binance')
+            
+            if 'price' in data:
+                price = float(data['price'])
+                logger.info(f"Binance price for {pair}: {price}")
+                return price
+            else:
+                logger.warning(f"No price data in Binance response for {pair}")
+                return None
+                
+        except requests.RequestException as e:
+            logger.error(f"Network error fetching from Binance for {pair}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching from Binance for {pair}: {e}")
+            return None
+    
     def _fetch_yfinance_data(self, pair: str, period: str, interval: str) -> Optional[pd.DataFrame]:
         """Fetch data from Yahoo Finance"""
         try:
@@ -668,7 +892,7 @@ class DataFetcher:
         Get current/latest price for a forex pair from multiple reliable sources
         
         Args:
-            pair: Currency pair (e.g., 'EURUSD')
+            pair: Currency pair (e.g., 'EURUSD') or crypto pair (e.g., 'BTCUSD')
         
         Returns:
             Current price as float or None if all sources fail
@@ -695,22 +919,123 @@ class DataFetcher:
             if not self._check_rate_limit():
                 self._wait_for_rate_limit()
             
-            # Method 1: Free APIs first (to avoid 429 errors from Yahoo Finance)
-            price = self._try_free_apis(pair)
-            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Free API')
+            # For crypto pairs, prioritize CoinGecko and Binance
+            if self._is_crypto_pair(pair):
+                # Method 1: CoinGecko for crypto
+                price = self._fetch_coingecko_price(pair)
+                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'CoinGecko')
+                if validated_price:
+                    return validated_price
+                
+                # Method 2: Binance for crypto
+                price = self._fetch_binance_price(pair)
+                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Binance')
+                if validated_price:
+                    return validated_price
+                
+                # Method 3: Yahoo Finance as backup for crypto
+                symbol = self.yf_symbols.get(pair)
+                if symbol and self._check_rate_limit():
+                    try:
+                        # Use threading timeout for cross-platform compatibility
+                        import threading
+                        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+                        
+                        def fetch_yahoo_data():
+                            ticker = yf.Ticker(symbol)
+                            # Try multiple Yahoo Finance methods
+                            hist = ticker.history(period="1d", interval="1m")
+                            if not hist.empty:
+                                return float(hist['Close'].iloc[-1])
+                            
+                            # Try info method as backup
+                            info = ticker.info
+                            current_price = info.get('regularMarketPrice') or info.get('price')
+                            if current_price:
+                                return float(current_price)
+                            return None
+                        
+                        # Execute with timeout
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(fetch_yahoo_data)
+                            try:
+                                price = future.result(timeout=5)  # 5 second timeout
+                                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Yahoo Finance')
+                                if validated_price:
+                                    return validated_price
+                            except FutureTimeoutError:
+                                logger.warning(f"Yahoo Finance timeout for {pair}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Yahoo Finance failed for {pair}: {e}")
+            else:
+                # For forex pairs, use the existing order: Free APIs -> Yahoo Finance -> Alpha Vantage
+                # Method 1: Free APIs first (to avoid 429 errors from Yahoo Finance)
+                price = self._try_free_apis(pair)
+                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Free API')
+                if validated_price:
+                    return validated_price
+                
+                # Method 2: Yahoo Finance (only if free APIs fail and rate limit allows)
+                symbol = self.yf_symbols.get(pair)
+                if symbol and self._check_rate_limit():
+                    try:
+                        # Use threading timeout for cross-platform compatibility
+                        import threading
+                        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+                        
+                        def fetch_yahoo_data():
+                            ticker = yf.Ticker(symbol)
+                            # Try multiple Yahoo Finance methods
+                            hist = ticker.history(period="1d", interval="1m")
+                            if not hist.empty:
+                                return float(hist['Close'].iloc[-1])
+                            
+                            # Try info method as backup
+                            info = ticker.info
+                            current_price = info.get('regularMarketPrice') or info.get('price')
+                            if current_price:
+                                return float(current_price)
+                            return None
+                        
+                        # Execute with timeout
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(fetch_yahoo_data)
+                            try:
+                                price = future.result(timeout=5)  # 5 second timeout
+                                validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Yahoo Finance')
+                                if validated_price:
+                                    return validated_price
+                            except FutureTimeoutError:
+                                logger.warning(f"Yahoo Finance timeout for {pair}")
+                            
+                    except Exception as e:
+                        if "429" in str(e) or "Too Many Requests" in str(e):
+                            logger.warning(f"Yahoo Finance rate limited for {pair}: {e}")
+                            # Increase delay more aggressively for future requests
+                            self.rate_limit_delay = min(5.0, self.rate_limit_delay * 2.0)
+                            logger.info(f"Increased rate limit delay to {self.rate_limit_delay}s")
+                        else:
+                            logger.warning(f"Yahoo Finance failed for {pair}: {e}")
+                
+                # Method 3: Alpha Vantage (if API key available and rate limit allows)
+                if self.alpha_vantage_key and self._check_rate_limit():
+                    try:
+                        price = self._fetch_alpha_vantage_realtime(pair)
+                        validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Alpha Vantage')
+                        if validated_price:
+                            return validated_price
+                    except Exception as e:
+                        logger.warning(f"Alpha Vantage failed for {pair}: {e}")
+            
+            # Method 4: Use fallback realistic prices if all APIs fail
+            logger.warning(f"All external sources failed for {pair}, using fallback data")
+            price = self._get_fallback_price(pair)
+            validated_price = self._validate_and_cache_price(pair, price, cache_key, 'Fallback', cache_time=10)
             if validated_price:
                 return validated_price
             
-            # Method 2: Yahoo Finance (only if free APIs fail and rate limit allows)
-            symbol = self.yf_symbols.get(pair)
-            if symbol and self._check_rate_limit():
-                try:
-                    # Use threading timeout for cross-platform compatibility
-                    import threading
-                    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-                    
-                    def fetch_yahoo_data():
-                        ticker = yf.Ticker(symbol)
+            logger.error(f"All data sources failed for {pair}")
                         # Try multiple Yahoo Finance methods
                         hist = ticker.history(period="1d", interval="1m")
                         if not hist.empty:

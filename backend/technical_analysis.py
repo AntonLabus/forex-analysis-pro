@@ -95,6 +95,38 @@ class TechnicalAnalysis:
         williams_r = -100 * ((highest_high - close) / denominator)
         return williams_r.fillna(-50)
     
+    def find_important_price_points(self, df: pd.DataFrame, window: int = 30, years: int = 10) -> list[float]:
+        """
+        Identify important price action points from up to 10 years of historical data.
+        Args:
+            df: DataFrame with 'close' prices, indexed by date.
+            window: Rolling window to find local extrema.
+            years: Number of years to look back.
+        Returns:
+            List of price levels (floats) considered important.
+        """
+        if df.empty or 'close' not in df.columns:
+            return []
+        # Filter last N years
+        if 'date' in df.columns:
+            df = df[df['date'] >= (datetime.now() - pd.DateOffset(years=years))]
+        highs = df['close'][(df['close'] == df['close'].rolling(window, center=True).max())]
+        lows = df['close'][(df['close'] == df['close'].rolling(window, center=True).min())]
+        levels = pd.concat([highs, lows]).dropna().unique()
+        return sorted(levels)
+
+    def is_at_important_level(self, current_price: float, levels: list[float], threshold: float = 0.001) -> bool:
+        """
+        Check if current price is near any important price action point.
+        Args:
+            current_price: Latest price.
+            levels: List of important price levels.
+            threshold: Relative proximity (e.g., 0.1%).
+        Returns:
+            True if near a level, else False.
+        """
+        return any(abs(current_price - lvl) / lvl < threshold for lvl in levels)
+
     def analyze_pair(self, df: pd.DataFrame, pair: str, timeframe: str = '1h') -> Dict[str, Any]:
         """
         Perform comprehensive technical analysis on a currency pair
@@ -133,6 +165,10 @@ class TechnicalAnalysis:
             volatility_analysis = self._analyze_volatility(close, high, low)
             volume_analysis = self._analyze_volume(close, volume)
             
+            # --- Important price action points logic ---
+            important_levels = self.find_important_price_points(df)
+            at_important_level = self.is_at_important_level(float(close.iloc[-1]), important_levels)
+            
             # Generate summary
             summary = self._generate_summary(trend_analysis, momentum_analysis, volatility_analysis)
             
@@ -151,7 +187,9 @@ class TechnicalAnalysis:
                 'volume_analysis': volume_analysis,
                 'last_price': float(close.iloc[-1]) if len(close) > 0 else 0,
                 'price_change': float(close.iloc[-1] - close.iloc[-2]) if len(close) > 1 else 0,
-                'price_change_percent': float(((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100) if len(close) > 1 and close.iloc[-2] != 0 else 0
+                'price_change_percent': float(((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100) if len(close) > 1 and close.iloc[-2] != 0 else 0,
+                'important_levels': important_levels,
+                'at_important_level': at_important_level
             }
             
             self.last_analysis = analysis_result
@@ -477,3 +515,31 @@ class TechnicalAnalysis:
         except Exception as e:
             logger.error(f"Error calculating support/resistance levels: {e}")
             return {'support': [], 'resistance': []}
+    
+    def _analyze_oscillators(self, close: pd.Series, high: pd.Series, low: pd.Series) -> dict:
+        """Stub for oscillators analysis (RSI, Stochastic, Williams %R)"""
+        return {
+            'rsi': {'value': self.calculate_rsi(close).iloc[-1]},
+            'stochastic': {'k': self.calculate_stochastic(high, low, close)['k'].iloc[-1]},
+            'williams_r': {'value': self.calculate_williams_r(high, low, close).iloc[-1]}
+        }
+
+    def _analyze_moving_averages(self, close: pd.Series) -> dict:
+        """Stub for moving averages analysis"""
+        return {
+            'sma_20': self.calculate_sma(close, 20).iloc[-1],
+            'sma_50': self.calculate_sma(close, 50).iloc[-1],
+            'signals': {'sma_20_above_50': self.calculate_sma(close, 20).iloc[-1] > self.calculate_sma(close, 50).iloc[-1]}
+        }
+
+    def _analyze_support_resistance(self, close: pd.Series) -> dict:
+        """Stub for support/resistance analysis"""
+        return {
+            'nearest_support': min(close.tail(20)),
+            'nearest_resistance': max(close.tail(20)),
+            'current_price': close.iloc[-1]
+        }
+
+    def _analyze_patterns(self, close: pd.Series, high: pd.Series, low: pd.Series) -> dict:
+        """Stub for pattern recognition"""
+        return {'detected_patterns': {}}

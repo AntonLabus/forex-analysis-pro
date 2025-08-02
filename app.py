@@ -138,6 +138,16 @@ FOREX_PAIRS = [
     'AUDUSD', 'USDCAD', 'NZDUSD', 'EURGBP'
 ]
 
+# Popular crypto pairs
+CRYPTO_PAIRS = [
+    'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 
+    'DOGEUSD', 'DOTUSD', 'LTCUSD', 'BCHUSD', 'AVAXUSD', 'SHIBUSD',
+    'TRXUSD', 'LINKUSD', 'MATICUSD', 'ATOMUSD', 'UNIUSD', 'FILUSD',
+    'APTUSD', 'ARBUSD', 'OPUSD', 'PEPEUSD', 'XLMUSD', 'ETCUSD',
+    'HBARUSD', 'VETUSD', 'ICPUSD', 'LDOUSD', 'CROUSD', 'QNTUSD',
+    'GRTUSD', 'MKRUSD', 'ALGOUSD', 'SANDUSD', 'EGLDUSD', 'AAVEUSD'
+]
+
 @app.route('/')
 def home():
     """Home page - landing page with featured pair"""
@@ -210,8 +220,19 @@ def test_current_price(pair):
 
 @app.route('/api/forex/pairs')
 def get_forex_pairs():
-    """Get all available forex pairs with real-time data - optimized for fast response"""
+    """Get all available pairs with real-time data - supports market type filtering"""
     try:
+        # Get market type from query parameter (forex or crypto)
+        market_type = request.args.get('market_type', 'forex').lower()
+        
+        # Select pairs based on market type
+        if market_type == 'crypto':
+            selected_pairs = CRYPTO_PAIRS
+            endpoint_name = "crypto pairs"
+        else:
+            selected_pairs = FOREX_PAIRS
+            endpoint_name = "forex pairs"
+        
         pairs_data = []
         successful_pairs = 0
         
@@ -223,7 +244,7 @@ def get_forex_pairs():
             data_fetcher.cache.clear()
             data_fetcher.cache_expiry.clear()
         
-        logger.info("Fetching forex pairs data (optimized)...")
+        logger.info(f"Fetching {endpoint_name} data (optimized)...")
         
         # Use shorter timeout and reduced delays to prevent worker timeout
         import concurrent.futures
@@ -243,7 +264,7 @@ def get_forex_pairs():
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                 # Submit all requests
-                future_to_pair = {executor.submit(fetch_pair_data, pair): pair for pair in FOREX_PAIRS}
+                future_to_pair = {executor.submit(fetch_pair_data, pair): pair for pair in selected_pairs}
                 
                 # Collect results with shorter timeout to prevent worker timeout
                 for future in concurrent.futures.as_completed(future_to_pair, timeout=10):
@@ -253,7 +274,7 @@ def get_forex_pairs():
             logger.warning("Some pairs timed out during concurrent fetch")
         
         # Process results
-        for pair in FOREX_PAIRS:
+        for pair in selected_pairs:
             try:
                 current_price = pair_prices.get(pair)
                 
@@ -380,22 +401,23 @@ def get_forex_pairs():
         
         # Return data even if some pairs failed, as long as we have at least some data
         if successful_pairs == 0:
-            logger.error("No forex data available from any source")
+            logger.error(f"No {endpoint_name} data available from any source")
             return jsonify({
                 'success': False, 
-                'error': 'No forex data currently available. The service may be experiencing high load. Please try again in a moment.',
+                'error': f'No {endpoint_name} data currently available. The service may be experiencing high load. Please try again in a moment.',
                 'data': []
             }), 503
         
-        logger.info(f"Successfully fetched data for {successful_pairs}/{len(FOREX_PAIRS)} pairs")
+        logger.info(f"Successfully fetched data for {successful_pairs}/{len(selected_pairs)} pairs")
         
         return jsonify({
             'success': True,
             'data': pairs_data,
             'timestamp': datetime.now().isoformat(),
-            'source': f'Real-time data from multiple providers ({successful_pairs}/{len(FOREX_PAIRS)} pairs)',
+            'source': f'Real-time data from multiple providers ({successful_pairs}/{len(selected_pairs)} pairs)',
             'pairs_loaded': successful_pairs,
-            'total_pairs': len(FOREX_PAIRS)
+            'total_pairs': len(selected_pairs),
+            'market_type': market_type
         })
         
     except Exception as e:
@@ -933,8 +955,17 @@ def generate_demo_signals(pair: str) -> Dict[str, Any]:
 @app.route('/api/signals')
 @app.route('/api/signals/all')
 def get_all_signals():
-    """Get signals for all major forex pairs"""
+    """Get signals for all pairs - supports market type filtering"""
     try:
+        # Get market type from query parameter (forex or crypto)
+        market_type = request.args.get('market_type', 'forex').lower()
+        
+        # Select pairs based on market type
+        if market_type == 'crypto':
+            selected_pairs = CRYPTO_PAIRS
+        else:
+            selected_pairs = FOREX_PAIRS
+        
         all_signals = {}
         active_signals = 0
         bullish_signals = 0
@@ -942,7 +973,7 @@ def get_all_signals():
         total_confidence = 0.0
         signal_count = 0
         
-        for pair in FOREX_PAIRS:
+        for pair in selected_pairs:
             try:
                 current_price = data_fetcher.get_current_price(pair)
                 if current_price:
@@ -1004,7 +1035,8 @@ def get_all_signals():
                 'avg_confidence': round(avg_confidence, 1),
                 'total_pairs': len(all_signals)
             },
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'market_type': market_type
         })
         
     except Exception as e:
@@ -1024,9 +1056,9 @@ def handle_disconnect():
 
 @socketio.on('subscribe_pair')
 def handle_subscribe_pair(data):
-    """Handle subscription to a forex pair for real-time updates"""
+    """Handle subscription to a pair for real-time updates"""
     pair = data.get('pair')
-    if pair in FOREX_PAIRS:
+    if pair in FOREX_PAIRS or pair in CRYPTO_PAIRS:
         logger.info(f'Client subscribed to {pair}')
         # In a real implementation, you would add the client to a subscription list
         emit('subscription_confirmed', {'pair': pair})
@@ -1095,14 +1127,28 @@ def broadcast_price_updates():
     """Background task to broadcast real-time price updates"""
     while True:
         try:
+            # Broadcast forex pairs
             for pair in FOREX_PAIRS:
                 current_price = data_fetcher.get_current_price(pair)
                 if current_price:
                     socketio.emit('price_update', {
                         'pair': pair,
                         'price': current_price,
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'market_type': 'forex'
                     })
+            
+            # Broadcast crypto pairs
+            for pair in CRYPTO_PAIRS:
+                current_price = data_fetcher.get_current_price(pair)
+                if current_price:
+                    socketio.emit('price_update', {
+                        'pair': pair,
+                        'price': current_price,
+                        'timestamp': datetime.now().isoformat(),
+                        'market_type': 'crypto'
+                    })
+            
             time.sleep(30)  # Update every 30 seconds
         except Exception as e:
             logger.error(f"Error in price update broadcast: {e}")

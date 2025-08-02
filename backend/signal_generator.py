@@ -61,6 +61,16 @@ class SignalGenerator:
             # Generate position sizing recommendation
             position_size = self._calculate_position_size(risk_metrics, combined_signal)
             
+            # Check for historically important price action point
+            at_important_level = technical_analysis.get('at_important_level', False)
+            important_levels = technical_analysis.get('important_levels', [])
+            
+            # If at important level, force a valid signal with high confidence
+            if at_important_level and important_levels:
+                combined_signal['direction'] = 'SIGNIFICANT_LEVEL'
+                combined_signal['confidence'] = 90
+                combined_signal['note'] = 'Current price matches a historically important price action point.'
+            
             # Create final signal output
             now = datetime.now()
             valid_until = now + timedelta(hours=1)  # Signals valid for 1 hour by default
