@@ -711,12 +711,13 @@ def get_technical_analysis(pair):
             logger.warning(f"No historical data available for {pair}")
             return jsonify({
                 'success': False,
-                'error': f'No historical data available for {pair}. Technical analysis requires sufficient price history.',
+                'error': f'No historical data available for {pair}',
                 'pair': pair,
                 'timeframe': timeframe,
                 'timestamp': datetime.now().isoformat(),
-                'message': 'Unable to perform technical analysis without real market data.'
-            }), 404
+                'message': 'Technical analysis requires sufficient price history. Please try again later when market data is available.',
+                'data_status': 'insufficient'
+            }), 200  # Return 200 instead of 404
         
         # Standardize column names for technical analysis (expects lowercase)
         data.columns = [col.lower() for col in data.columns]
