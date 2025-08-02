@@ -38,7 +38,7 @@ const CONFIG = {
     },
     
     // Currency pairs configuration
-    CURRENCY_PAIRS: [
+    FOREX_PAIRS: [
         { symbol: 'EURUSD', name: 'EUR/USD', base: 'EUR', quote: 'USD' },
         { symbol: 'GBPUSD', name: 'GBP/USD', base: 'GBP', quote: 'USD' },
         { symbol: 'USDJPY', name: 'USD/JPY', base: 'USD', quote: 'JPY' },
@@ -47,6 +47,34 @@ const CONFIG = {
         { symbol: 'USDCAD', name: 'USD/CAD', base: 'USD', quote: 'CAD' },
         { symbol: 'NZDUSD', name: 'NZD/USD', base: 'NZD', quote: 'USD' },
         { symbol: 'EURGBP', name: 'EUR/GBP', base: 'EUR', quote: 'GBP' }
+    ],
+    
+    // Crypto pairs configuration
+    CRYPTO_PAIRS: [
+        { symbol: 'BTCUSD', name: 'BTC/USD', base: 'BTC', quote: 'USD' },
+        { symbol: 'ETHUSD', name: 'ETH/USD', base: 'ETH', quote: 'USD' },
+        { symbol: 'BNBUSD', name: 'BNB/USD', base: 'BNB', quote: 'USD' },
+        { symbol: 'SOLUSD', name: 'SOL/USD', base: 'SOL', quote: 'USD' },
+        { symbol: 'XRPUSD', name: 'XRP/USD', base: 'XRP', quote: 'USD' },
+        { symbol: 'ADAUSD', name: 'ADA/USD', base: 'ADA', quote: 'USD' }
+    ],
+    
+    // Combined currency pairs (for backward compatibility)
+    CURRENCY_PAIRS: [
+        { symbol: 'EURUSD', name: 'EUR/USD', base: 'EUR', quote: 'USD' },
+        { symbol: 'GBPUSD', name: 'GBP/USD', base: 'GBP', quote: 'USD' },
+        { symbol: 'USDJPY', name: 'USD/JPY', base: 'USD', quote: 'JPY' },
+        { symbol: 'USDCHF', name: 'USD/CHF', base: 'USD', quote: 'CHF' },
+        { symbol: 'AUDUSD', name: 'AUD/USD', base: 'AUD', quote: 'USD' },
+        { symbol: 'USDCAD', name: 'USD/CAD', base: 'USD', quote: 'CAD' },
+        { symbol: 'NZDUSD', name: 'NZD/USD', base: 'NZD', quote: 'USD' },
+        { symbol: 'EURGBP', name: 'EUR/GBP', base: 'EUR', quote: 'GBP' },
+        { symbol: 'BTCUSD', name: 'BTC/USD', base: 'BTC', quote: 'USD' },
+        { symbol: 'ETHUSD', name: 'ETH/USD', base: 'ETH', quote: 'USD' },
+        { symbol: 'BNBUSD', name: 'BNB/USD', base: 'BNB', quote: 'USD' },
+        { symbol: 'SOLUSD', name: 'SOL/USD', base: 'SOL', quote: 'USD' },
+        { symbol: 'XRPUSD', name: 'XRP/USD', base: 'XRP', quote: 'USD' },
+        { symbol: 'ADAUSD', name: 'ADA/USD', base: 'ADA', quote: 'USD' }
     ],
     
     // Timeframes
@@ -150,8 +178,29 @@ if (CONFIG.API_BASE_URL.includes('localhost')) {
 // Make CONFIG globally available
 window.CONFIG = CONFIG;
 
+// Helper function to get pairs based on market type
+CONFIG.getPairsByMarketType = function(marketType) {
+    if (marketType === 'crypto') {
+        return CONFIG.CRYPTO_PAIRS;
+    } else {
+        return CONFIG.FOREX_PAIRS;
+    }
+};
+
+// Helper function to check if a pair is crypto
+CONFIG.isCryptoPair = function(symbol) {
+    return CONFIG.CRYPTO_PAIRS.some(pair => pair.symbol === symbol);
+};
+
+// Helper function to check if a pair is forex
+CONFIG.isForexPair = function(symbol) {
+    return CONFIG.FOREX_PAIRS.some(pair => pair.symbol === symbol);
+};
+
 // Freeze the configuration to prevent accidental modifications
 Object.freeze(CONFIG);
+Object.freeze(CONFIG.FOREX_PAIRS);
+Object.freeze(CONFIG.CRYPTO_PAIRS);
 Object.freeze(CONFIG.CURRENCY_PAIRS);
 Object.freeze(CONFIG.TIMEFRAMES);
 Object.freeze(CONFIG.CHART);

@@ -86,13 +86,13 @@ class SignalManager {
      */
     async fetchSignals(pair = '') {
         try {
-            // Filter pairs by market type
-            let pairs = CONFIG.CURRENCY_PAIRS.map(pair => pair.symbol);
-            if (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE === 'crypto') {
-                pairs = pairs.filter(p => p.endsWith('USD') && (p.startsWith('BTC') || p.startsWith('ETH') || p.startsWith('BNB') || p.startsWith('SOL') || p.startsWith('XRP') || p.startsWith('ADA') || p.startsWith('DOGE') || p.startsWith('DOT') || p.startsWith('LTC') || p.startsWith('BCH') || p.startsWith('AVAX') || p.startsWith('SHIB') || p.startsWith('TRX') || p.startsWith('LINK') || p.startsWith('MATIC') || p.startsWith('ATOM')));
-            } else {
-                pairs = pairs.filter(p => !p.startsWith('BTC') && !p.startsWith('ETH') && !p.startsWith('BNB') && !p.startsWith('SOL') && !p.startsWith('XRP') && !p.startsWith('ADA') && !p.startsWith('DOGE') && !p.startsWith('DOT') && !p.startsWith('LTC') && !p.startsWith('BCH') && !p.startsWith('AVAX') && !p.startsWith('SHIB') && !p.startsWith('TRX') && !p.startsWith('LINK') && !p.startsWith('MATIC') && !p.startsWith('ATOM'));
-            }
+            // Get pairs based on market type
+            const marketType = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? MARKET_TYPE : 'forex';
+            const availablePairs = CONFIG.getPairsByMarketType(marketType);
+            
+            console.log(`Fetching signals for market type: ${marketType}`);
+            console.log(`Available pairs:`, availablePairs.map(p => p.symbol));
+            
             // Check cache first for single pair requests
             if (pair) {
                 const cached = this.getCachedSignal(pair, this.currentTimeframe);
@@ -102,29 +102,48 @@ class SignalManager {
                     return { success: true, signals: cached };
                 }
             }
+                    this.updateSignalDisplay();
+            
             // Rate limiting
             await this.waitForRateLimit();
-            const marketTypeParam = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? `market_type=${MARKET_TYPE}&` : '';
+            
+            // Build URL with market type parameter
+            const marketTypeParam = `market_type=${marketType}`;
             const url = pair ? 
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?${marketTypeParam}timeframe=${this.currentTimeframe}` :
-                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?${marketTypeParam}timeframe=${this.currentTimeframe}`;
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/${pair}?${marketTypeParam}&timeframe=${this.currentTimeframe}` :
+                `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?${marketTypeParam}&timeframe=${this.currentTimeframe}`;
+            
+            console.log(`Fetching signals from: ${url}`);
             const response = await Utils.request(url);
+            
             if (response.success) {
+                const availablePairSymbols = availablePairs.map(p => p.symbol);
+                
                 if (pair) {
                     // Cache single pair response
                     this.setCachedSignal(pair, this.currentTimeframe, response.signals);
                     this.signals.set(pair, response.signals);
                 } else {
                     // Handle multiple pairs - response.signals is an object with pair names as keys
+                    // Filter to only include pairs for the current market type
                     for (const [pairName, signalData] of Object.entries(response.signals || {})) {
-                        // Add the pair name to the signal data
-                        signalData.pair = pairName;
-                        signalData.timeframe = this.currentTimeframe;
-                        // Cache each pair's signal
-                        this.setCachedSignal(pairName, this.currentTimeframe, signalData);
-                        this.signals.set(pairName, signalData);
+                        // Only include pairs that belong to the current market type
+                        if (availablePairSymbols.includes(pairName)) {
+                            // Add the pair name to the signal data
+                            signalData.pair = pairName;
+                            signalData.timeframe = this.currentTimeframe;
+                            signalData.marketType = marketType;
+                            
+                            // Cache each pair's signal
+                            this.setCachedSignal(pairName, this.currentTimeframe, signalData);
+                            this.signals.set(pairName, signalData);
+                        } else {
+                            console.log(`Filtering out ${pairName} - not in ${marketType} pairs`);
+                        }
                     }
                 }
+                
+                console.log(`Loaded ${this.signals.size} signals for ${marketType} market`);
                 this.updateSignalDisplay();
                 return response;
             } else {
@@ -142,14 +161,41 @@ class SignalManager {
      */
     async loadSignals() {
         try {
-            console.log(`Loading signals for market type: ${typeof MARKET_TYPE !== 'undefined' ? MARKET_TYPE : 'forex'}`);
-            // Clear existing signals cache when switching market types
+            const marketType = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? MARKET_TYPE : 'forex';
+            console.log(`Loading signals for market type: ${marketType}`);
+            
+            // Clear existing signals and cache when switching market types
+            this.signals.clear();
             this.signalCache.clear();
             this.cacheExpiry.clear();
+            
+            // Show loading state in the signals container
+            const container = document.getElementById('signals-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="loading-placeholder" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>Loading ${marketType} signals...</p>
+                        <p style="font-size: 0.9em; color: #888;">Fetching live trading signals...</p>
+                    </div>
+                `;
+            }
             
             await this.fetchSignals();
         } catch (error) {
             console.error('Error loading signals:', error);
+            const container = document.getElementById('signals-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-placeholder" style="text-align: center; padding: 2rem; color: var(--text-danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>Failed to load signals</p>
+                        <button onclick="window.signalManager.loadSignals()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -159,15 +205,23 @@ class SignalManager {
      */
     async fetchAllSignals() {
         try {
+            const marketType = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? MARKET_TYPE : 'forex';
+            const availablePairs = CONFIG.getPairsByMarketType(marketType);
+            
             // Check if we can use batch API endpoint
             const cached = this.getCachedSignal('ALL', this.currentTimeframe);
             if (cached) {
                 console.log('Using cached batch signals');
-                // Process cached batch data
+                // Process cached batch data, but filter by market type
+                const availablePairSymbols = availablePairs.map(p => p.symbol);
+                
                 for (const [pairName, signalData] of Object.entries(cached)) {
-                    signalData.pair = pairName;
-                    signalData.timeframe = this.currentTimeframe;
-                    this.signals.set(pairName, signalData);
+                    if (availablePairSymbols.includes(pairName)) {
+                        signalData.pair = pairName;
+                        signalData.timeframe = this.currentTimeframe;
+                        signalData.marketType = marketType;
+                        this.signals.set(pairName, signalData);
+                    }
                 }
                 this.updateSignalDisplay();
                 this.updateQuickStats();
@@ -177,23 +231,32 @@ class SignalManager {
             // Use batch endpoint for better efficiency
             await this.waitForRateLimit();
             
-            const url = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?timeframe=${this.currentTimeframe}`;
+            const url = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.SIGNALS}/all?market_type=${marketType}&timeframe=${this.currentTimeframe}`;
+            console.log(`Fetching all signals from: ${url}`);
             const response = await Utils.request(url);
             
             if (response.success && response.signals) {
                 // Cache the batch result
                 this.setCachedSignal('ALL', this.currentTimeframe, response.signals);
                 
-                // Process batch response
+                // Process batch response, filtering by market type
+                const availablePairSymbols = availablePairs.map(p => p.symbol);
+                
                 for (const [pairName, signalData] of Object.entries(response.signals)) {
-                    signalData.pair = pairName;
-                    signalData.timeframe = this.currentTimeframe;
-                    this.signals.set(pairName, signalData);
-                    
-                    // Also cache individual pairs
-                    this.setCachedSignal(pairName, this.currentTimeframe, signalData);
+                    if (availablePairSymbols.includes(pairName)) {
+                        signalData.pair = pairName;
+                        signalData.timeframe = this.currentTimeframe;
+                        signalData.marketType = marketType;
+                        this.signals.set(pairName, signalData);
+                        
+                        // Also cache individual pairs
+                        this.setCachedSignal(pairName, this.currentTimeframe, signalData);
+                    } else {
+                        console.log(`Filtering out ${pairName} - not in ${marketType} pairs`);
+                    }
                 }
                 
+                console.log(`Loaded ${this.signals.size} signals for ${marketType} market`);
                 this.updateSignalDisplay();
                 this.updateQuickStats();
                 return response;
@@ -364,11 +427,24 @@ class SignalManager {
 
         // Get filtered signals
         const filteredSignals = this.getFilteredSignals();
+        const marketType = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? MARKET_TYPE : 'forex';
 
         if (filteredSignals.length === 0) {
-            this.showNoSignalsMessage(container);
+            this.showNoSignalsMessage(container, marketType);
             return;
         }
+
+        // Add market type indicator
+        const marketIndicator = document.createElement('div');
+        marketIndicator.className = 'market-type-indicator';
+        marketIndicator.innerHTML = `
+            <div class="market-indicator-content">
+                <i class="fas fa-${marketType === 'crypto' ? 'coins' : 'chart-line'}"></i>
+                <span>${marketType.toUpperCase()} Signals (${filteredSignals.length})</span>
+                <small>Last updated: ${new Date().toLocaleTimeString()}</small>
+            </div>
+        `;
+        container.appendChild(marketIndicator);
 
         // Create signal cards
         filteredSignals.forEach(signal => {
@@ -668,16 +744,28 @@ class SignalManager {
     /**
      * Show no signals message
      * @param {HTMLElement} container - Container element
+     * @param {string} marketType - Current market type
      */
-    showNoSignalsMessage(container) {
+    showNoSignalsMessage(container, marketType = 'forex') {
+        const marketLabel = marketType.toUpperCase();
+        const marketIcon = marketType === 'crypto' ? 'coins' : 'chart-line';
+        
         container.innerHTML = `
             <div class="no-signals-message">
                 <div class="no-signals-icon">
-                    <i class="fas fa-bell-slash"></i>
+                    <i class="fas fa-${marketIcon}"></i>
                 </div>
                 <div class="no-signals-text">
-                    <h3>No signals available</h3>
-                    <p>No trading signals match your current filters. Try adjusting the filters or check back later.</p>
+                    <h3>No ${marketLabel} signals available</h3>
+                    <p>No ${marketType} trading signals match your current filters or are available at this time.</p>
+                    <div class="no-signals-actions">
+                        <button onclick="window.signalManager.clearFilters()" class="clear-filters-btn">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                        <button onclick="window.signalManager.loadSignals()" class="refresh-signals-btn">
+                            <i class="fas fa-refresh"></i> Refresh Signals
+                        </button>
+                    </div>
                 </div>
             </div>
         `;

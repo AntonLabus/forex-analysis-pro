@@ -1068,6 +1068,114 @@ body {
   font-weight: 600;
 }
 
+/* Market type indicator */
+.market-type-indicator {
+  background: linear-gradient(135deg, var(--accent-color), var(--success-color));
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.market-indicator-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.market-indicator-content i {
+  font-size: 1.25rem;
+}
+
+.market-indicator-content span {
+  font-size: 1.125rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.market-indicator-content small {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+/* No signals message */
+.no-signals-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
+  border-radius: 1rem;
+  color: var(--text-secondary);
+}
+
+.no-signals-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.no-signals-text h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.no-signals-text p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+}
+
+.no-signals-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.clear-filters-btn,
+.refresh-signals-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-btn {
+  background: var(--warning-color);
+  color: white;
+}
+
+.clear-filters-btn:hover {
+  background: #f97316;
+  transform: translateY(-1px);
+}
+
+.refresh-signals-btn {
+  background: var(--accent-color);
+  color: white;
+}
+
+.refresh-signals-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
 /* Recent trades */
 .recent-trades {
   background: var(--bg-secondary);
