@@ -2,6 +2,34 @@
  * Main application logic for Forex Analysis Pro
  */
 
+// Global market type variable
+let MARKET_TYPE = 'forex';
+
+// Global function to set market type
+function setMarketType(type) {
+    console.log('Setting market type to:', type);
+    MARKET_TYPE = type;
+    
+    // Update button states
+    const forexBtn = document.getElementById('forex-btn');
+    const cryptoBtn = document.getElementById('crypto-btn');
+    
+    if (forexBtn) forexBtn.classList.toggle('active', type === 'forex');
+    if (cryptoBtn) cryptoBtn.classList.toggle('active', type === 'crypto');
+    
+    // Refresh all data with new market type
+    if (window.app) {
+        window.app.refreshAllData();
+    }
+    
+    // Update other parts of the app
+    if (window.signalManager) {
+        window.signalManager.loadSignals();
+    }
+    
+    console.log('Market type set to:', type);
+}
+
 class ForexAnalysisApp {
     constructor() {
         this.socket = null;
@@ -71,21 +99,6 @@ class ForexAnalysisApp {
      * Set up event listeners for UI interactions
      */
     setupEventListeners() {
-        // Listen for market type changes and refresh all views
-        const forexBtn = document.getElementById('forex-btn');
-        const cryptoBtn = document.getElementById('crypto-btn');
-        if (forexBtn) {
-            forexBtn.addEventListener('click', () => {
-                if (typeof setMarketType === 'function') setMarketType('forex');
-                this.refreshAllData();
-            });
-        }
-        if (cryptoBtn) {
-            cryptoBtn.addEventListener('click', () => {
-                if (typeof setMarketType === 'function') setMarketType('crypto');
-                this.refreshAllData();
-            });
-        }
         // Mobile menu toggle
         const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
         const navMenu = document.getElementById('nav-menu');
@@ -580,26 +593,31 @@ class ForexAnalysisApp {
      */
     async loadCurrencyPairs() {
         try {
-            console.log('Fetching currency pairs from:', `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}`);
-            const response = await Utils.request(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}`);
+            const apiUrl = `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.FOREX_PAIRS}?market_type=${MARKET_TYPE}`;
+            console.log('Fetching currency pairs from:', apiUrl);
+            const response = await Utils.request(apiUrl);
             
             console.log('API Response:', response);
             
             if (response.success && response.data) {
-                console.log('Processing', response.data.length, 'currency pairs');
+                console.log('Processing', response.data.length, 'currency pairs for market type:', MARKET_TYPE);
+                
+                // Clear existing data
+                this.currencyData.clear();
+                
                 response.data.forEach(pair => {
                     this.currencyData.set(pair.symbol, pair);
                 });
                 
                 this.updateCurrencyGrid();
                 this.updateLastRefreshTime();
-                console.log('Currency pairs loaded successfully');
+                console.log('Currency pairs loaded successfully for', MARKET_TYPE);
             } else {
                 throw new Error(response.error || 'Failed to load currency pairs - invalid response structure');
             }
         } catch (error) {
             console.error('Error loading currency pairs:', error);
-            Utils.showNotification('Failed to load live market data. Please check your connection.', 'error');
+            Utils.showNotification(`Failed to load live ${MARKET_TYPE} data. Please check your connection.`, 'error');
             throw error;
         }
     }
@@ -1371,6 +1389,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.forexApp = window.app; // Keep both for compatibility
     window.chartManager = new ChartManager();
     window.signalManager = new SignalManager();
+    
+    // Initialize market type to forex (default)
+    setTimeout(() => {
+        setMarketType('forex');
+    }, 100);
     
     console.log('Application initialized with chartManager:', !!window.chartManager);
     console.log('Application initialized with app:', !!window.app);
