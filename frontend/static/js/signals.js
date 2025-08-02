@@ -164,6 +164,9 @@ class SignalManager {
             const marketType = (typeof MARKET_TYPE !== 'undefined' && MARKET_TYPE) ? MARKET_TYPE : 'forex';
             console.log(`Loading signals for market type: ${marketType}`);
             
+            // Update signals section header to show market type
+            this.updateSignalsHeader(marketType);
+            
             // Clear existing signals and cache when switching market types
             this.signals.clear();
             this.signalCache.clear();
@@ -196,6 +199,19 @@ class SignalManager {
                     </div>
                 `;
             }
+        }
+    }
+
+    /**
+     * Update signals section header to show market type
+     * @param {string} marketType - Current market type
+     */
+    updateSignalsHeader(marketType) {
+        const signalsHeader = document.querySelector('#signals .section-header h2');
+        if (signalsHeader) {
+            const marketLabel = marketType.toUpperCase();
+            const marketIcon = marketType === 'crypto' ? 'coins' : 'bell';
+            signalsHeader.innerHTML = `<i class="fas fa-${marketIcon}"></i> ${marketLabel} Trading Signals`;
         }
     }
 
@@ -374,7 +390,7 @@ class SignalManager {
         }
         
         // Update signals display with timeframe indicator
-        this.updateSignalsHeader();
+        this.updateTimeframeHeader();
         
         // Fetch new signals for current timeframe
         await this.fetchAllSignals();
@@ -385,7 +401,7 @@ class SignalManager {
     /**
      * Update signals header to show current timeframe
      */
-    updateSignalsHeader() {
+    updateTimeframeHeader() {
         const timeframeLabels = {
             '5m': '5 Minutes',
             '15m': '15 Minutes', 
