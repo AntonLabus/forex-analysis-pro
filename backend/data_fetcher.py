@@ -99,8 +99,25 @@ class DataFetcher:
         
         if all_apis_failing and not self.emergency_mode:
             self.emergency_mode = True
-            self.emergency_mode_until = current_time + 3600  # 1 hour emergency mode
-            logger.error("🚨 EMERGENCY MODE ACTIVATED - All APIs failing, stopping all requests for 1 hour")
+            
+            # Adaptive timeout based on environment (development vs production)
+            try:
+                import os
+                env = os.getenv('FLASK_ENV', 'production').lower()
+                if env == 'development' or os.getenv('DEBUG', 'False').lower() == 'true':
+                    # Development: 10 minutes timeout for faster iteration
+                    timeout = 600  # 10 minutes
+                    logger.warning("🚨 EMERGENCY MODE ACTIVATED (DEV) - All APIs failing, stopping requests for 10 minutes")
+                else:
+                    # Production: 1 hour timeout for stability
+                    timeout = 3600  # 1 hour
+                    logger.error("🚨 EMERGENCY MODE ACTIVATED (PROD) - All APIs failing, stopping requests for 1 hour")
+            except:
+                # Fallback to production timeout
+                timeout = 3600
+                logger.error("🚨 EMERGENCY MODE ACTIVATED - All APIs failing, stopping requests for 1 hour")
+            
+            self.emergency_mode_until = current_time + timeout
         
         # Check if emergency mode should be disabled
         if self.emergency_mode and current_time > self.emergency_mode_until:
@@ -1083,10 +1100,23 @@ class DataFetcher:
             Current price as float or None if all sources fail
         """
         try:
-            # Emergency mode check - return None immediately if in emergency mode
+            # Emergency mode check with development bypass
             if hasattr(self, 'emergency_mode') and self.emergency_mode:
-                logger.warning(f"🚨 Emergency mode active - skipping API calls for {pair}")
-                return None
+                # Check if we're in development mode
+                try:
+                    import os
+                    env = os.getenv('FLASK_ENV', 'production').lower()
+                    debug = os.getenv('DEBUG', 'False').lower() == 'true'
+                    is_development = env == 'development' or debug
+                    
+                    if is_development:
+                        logger.info(f"🔧 Development mode - bypassing emergency mode for {pair}")
+                    else:
+                        logger.warning(f"🚨 Emergency mode active - skipping API calls for {pair}")
+                        return None
+                except:
+                    logger.warning(f"🚨 Emergency mode active - skipping API calls for {pair}")
+                    return None
             
             # Check emergency mode activation
             if hasattr(self, '_check_emergency_mode'):

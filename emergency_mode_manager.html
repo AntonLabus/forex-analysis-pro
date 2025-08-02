@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Mode Management</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #dc3545; 
+            text-align: center; 
+            margin-bottom: 30px;
+        }
+        .status-card { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 5px solid #007bff;
+        }
+        .status-active { border-left-color: #dc3545; background: #f8f9fa; }
+        .status-inactive { border-left-color: #28a745; background: #f8f9fa; }
+        .controls { 
+            text-align: center; 
+            margin: 30px 0; 
+        }
+        button { 
+            margin: 10px; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .btn-check { 
+            background: #007bff; 
+            color: white; 
+        }
+        .btn-reset { 
+            background: #dc3545; 
+            color: white; 
+        }
+        .btn-reset:hover { 
+            background: #c82333; 
+        }
+        .btn-check:hover { 
+            background: #0056b3; 
+        }
+        .log { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 6px; 
+            padding: 15px; 
+            margin: 20px 0; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            font-family: 'Consolas', monospace; 
+            font-size: 14px;
+        }
+        .log-entry { 
+            margin: 5px 0; 
+            padding: 5px; 
+            border-radius: 3px;
+        }
+        .log-info { background: #d1ecf1; color: #0c5460; }
+        .log-success { background: #d4edda; color: #155724; }
+        .log-error { background: #f8d7da; color: #721c24; }
+        .log-warning { background: #fff3cd; color: #856404; }
+        .environment-select {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .environment-select select {
+            padding: 8px 16px;
+            border: 2px solid #007bff;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Emergency Mode Management</h1>
+        <p style="text-align: center; color: #666;">
+            Monitor and control emergency mode status for the Forex Analysis Pro system
+        </p>
+        
+        <div class="environment-select">
+            <label for="environment">Environment: </label>
+            <select id="environment">
+                <option value="production">Production (Render)</option>
+                <option value="local">Local Development</option>
+            </select>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-check" onclick="checkStatus()">
+                📊 Check Status
+            </button>
+            <button class="btn-reset" onclick="resetEmergencyMode()">
+                🔧 Reset Emergency Mode
+            </button>
+        </div>
+        
+        <div id="status-display"></div>
+        
+        <div class="log" id="log">
+            <div class="log-entry log-info">
+                <strong>Ready:</strong> Select an action to begin
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 6px;">
+            <h3>⚠️ Important Notes:</h3>
+            <ul>
+                <li>Emergency mode is a circuit breaker that prevents API overload</li>
+                <li>It automatically resets after 1 hour if left alone</li>
+                <li>Manual reset should only be used when you're confident the API issues are resolved</li>
+                <li>Resetting too early may cause the system to hit rate limits again</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const APIs = {
+            production: 'https://forex-analysis-pro.onrender.com',
+            local: 'http://localhost:5000'
+        };
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function getSelectedAPI() {
+            const env = document.getElementById('environment').value;
+            return APIs[env];
+        }
+        
+        function getSelectedEnvironment() {
+            return document.getElementById('environment').value;
+        }
+        
+        async function checkStatus() {
+            const api = getSelectedAPI();
+            const env = getSelectedEnvironment();
+            
+            log(`Checking emergency mode status for ${env} environment...`, 'info');
+            
+            try {
+                const response = await fetch(`${api}/api/system/emergency-mode`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const mode = data.emergency_mode;
+                    
+                    // Update status display
+                    const statusDiv = document.getElementById('status-display');
+                    statusDiv.innerHTML = `
+                        <div class="status-card ${mode.active ? 'status-active' : 'status-inactive'}">
+                            <h3>${env.toUpperCase()} Environment Status</h3>
+                            <p><strong>Emergency Mode:</strong> ${mode.active ? '🚨 ACTIVE' : '✅ INACTIVE'}</p>
+                            ${mode.active ? `
+                                <p><strong>Remaining Time:</strong> ${mode.remaining_minutes} minutes</p>
+                                <p><strong>Message:</strong> ${mode.message}</p>
+                            ` : `
+                                <p><strong>Status:</strong> ${mode.message}</p>
+                            `}
+                            <p><strong>Last Checked:</strong> ${new Date().toLocaleString()}</p>
+                        </div>
+                    `;
+                    
+                    if (mode.active) {
+                        log(`⚠️ Emergency mode is ACTIVE - ${mode.remaining_minutes} minutes remaining`, 'warning');
+                    } else {
+                        log(`✅ Emergency mode is INACTIVE - system operating normally`, 'success');
+                    }
+                } else {
+                    log(`❌ Error checking status: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function resetEmergencyMode() {
+            const api = getSelectedAPI();
+            const env = getSelectedEnvironment();
+            
+            if (!confirm(`Are you sure you want to reset emergency mode for the ${env} environment?\n\nThis should only be done if you're confident the API issues are resolved.`)) {
+                log('Reset cancelled by user', 'info');
+                return;
+            }
+            
+            log(`Resetting emergency mode for ${env} environment...`, 'warning');
+            
+            try {
+                const response = await fetch(`${api}/api/system/emergency-mode/reset`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ ${data.message}`, 'success');
+                    
+                    // Auto-check status after reset
+                    setTimeout(() => {
+                        log('Auto-checking status after reset...', 'info');
+                        checkStatus();
+                    }, 1000);
+                } else {
+                    log(`❌ Error resetting: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-check status on page load
+        window.addEventListener('load', () => {
+            setTimeout(checkStatus, 500);
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>
