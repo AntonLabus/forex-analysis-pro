@@ -109,9 +109,22 @@ app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
 app.start_time = time.time()
 
 # Initialize extensions
-CORS(app)
+CORS(app, origins=[
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+    "https://forex-analysis-pro.netlify.app",
+    "https://forex-analysis-pro.onrender.com"
+], supports_credentials=True)
+
 socketio = SocketIO(app, 
-                   cors_allowed_origins="*",
+                   cors_allowed_origins=[
+                       "http://localhost:3000",
+                       "http://localhost:5000", 
+                       "http://127.0.0.1:5000",
+                       "https://forex-analysis-pro.netlify.app",
+                       "https://forex-analysis-pro.onrender.com"
+                   ],
                    async_mode='threading',
                    engineio_logger=False,
                    logger=False,
