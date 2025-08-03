@@ -457,41 +457,18 @@ def get_forex_pairs():
                                     # Get historical data to calculate real daily change (5 years for better data availability)
                                     hist_data = data_fetcher.get_historical_data(pair, period='5y', interval='1d')
                                     
-                                    if hist_data is not None and len(hist_data) >= 2:
+                                if hist_data is not None and len(hist_data) >= 2:
                                         # Get yesterday's close and calculate real change
                                         yesterday_close = float(hist_data.iloc[-2]['Close'])
                                         today_current = current_price
-                                        
                                         daily_change = today_current - yesterday_close
                                         daily_change_percent = (daily_change / yesterday_close) * 100
-                                        
                                         logger.info(f"Real daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
                                     else:
-                                        # Fallback: try to get change from Yahoo Finance directly
-                                        try:
-                                            import yfinance as yf
-                                            yf_symbol = {'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X', 'USDJPY': 'USDJPY=X', 'USDCHF': 'USDCHF=X', 'AUDUSD': 'AUDUSD=X', 'USDCAD': 'USDCAD=X', 'NZDUSD': 'NZDUSD=X', 'EURGBP': 'EURGBP=X'}.get(pair)
-                                            
-                                            if yf_symbol:
-                                                ticker = yf.Ticker(yf_symbol)
-                                                hist = ticker.history(period='2d')
-                                                
-                                                if len(hist) >= 2:
-                                                    yesterday_close = float(hist['Close'].iloc[-2])
-                                                    daily_change = current_price - yesterday_close
-                                                    daily_change_percent = (daily_change / yesterday_close) * 100
-                                                    logger.info(f"Yahoo daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
-                                                else:
-                                                    raise Exception("Insufficient Yahoo data")
-                                            else:
-                                                raise Exception("No Yahoo symbol mapping")
-                                        except Exception as yahoo_error:
-                                            logger.warning(f"Yahoo fallback failed for {pair}: {yahoo_error}")
-                                            # Final fallback: use conservative estimate (small random change)
-                                            import random
-                                            daily_change_percent = random.uniform(-0.5, 0.5)  # Much smaller range
-                                            daily_change = current_price * (daily_change_percent / 100)
-                                            logger.warning(f"Using fallback change for {pair}: {daily_change_percent:.2f}%")
+                                        # No real historical data available; set change to zero
+                                        logger.error(f"No real historical history for {pair}; defaulting daily change to zero")
+                                        daily_change = 0.0
+                                        daily_change_percent = 0.0
                                             
                                 except Exception as calc_error:
                                     logger.error(f"Error calculating daily change for {pair}: {calc_error}")
