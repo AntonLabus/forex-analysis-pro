@@ -456,8 +456,7 @@ def get_forex_pairs():
                                 try:
                                     # Get historical data to calculate real daily change (5 years for better data availability)
                                     hist_data = data_fetcher.get_historical_data(pair, period='5y', interval='1d')
-                                    
-                                if hist_data is not None and len(hist_data) >= 2:
+                                    if hist_data is not None and len(hist_data) >= 2:
                                         # Get yesterday's close and calculate real change
                                         yesterday_close = float(hist_data.iloc[-2]['Close'])
                                         today_current = current_price
@@ -469,7 +468,6 @@ def get_forex_pairs():
                                         logger.error(f"No real historical history for {pair}; defaulting daily change to zero")
                                         daily_change = 0.0
                                         daily_change_percent = 0.0
-                                            
                                 except Exception as calc_error:
                                     logger.error(f"Error calculating daily change for {pair}: {calc_error}")
                                     # Minimal fallback
