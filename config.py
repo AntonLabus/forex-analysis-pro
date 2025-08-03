@@ -27,12 +27,12 @@ YAHOO_FINANCE_HOURLY_LIMIT = 100  # Conservative Yahoo Finance limit
 # API-Specific Rate Limits (requests per hour)
 API_RATE_LIMITS = {
     'yahoo_finance': 100,
-    'alpha_vantage': 20,      # Daily limit spread across 24 hours
+    'alpha_vantage': 300,     # Hourly request limit (approx. 5 requests per minute)
     'exchangerate_api': 50,   # Conservative for 1500/month limit
     'exchangerate_host': 500, # High tolerance
     'fawaz_currency': 1000,    # GitHub CDN, very high tolerance
-    'binance': 100,           # Binance API for crypto prices
-    'coingecko': 50          # CoinGecko API for crypto prices
+    'binance': 300,           # Binance API for crypto prices (increased)
+    'coingecko': 300          # CoinGecko API for crypto prices (increased)
 }
 
 # Data Source Configuration
