@@ -793,22 +793,21 @@ class DataFetcher:
                 return data
         
         try:
+            # For forex pairs, prefer Alpha Vantage FX_DAILY first
+            if not self._is_crypto_pair(pair) and self.alpha_vantage_key:
+                if self._check_rate_limit('alpha_vantage'):
+                    av_data = self._fetch_alpha_vantage_data(pair, interval)
+                    if av_data is not None and not av_data.empty:
+                        self.cache[cache_key] = av_data
+                        self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
+                        return av_data
             # Try Yahoo Finance as fallback (with rate limiting)
-            if self._check_rate_limit():
-                data = self._fetch_yfinance_data(pair, period, interval)
-                if data is not None and not data.empty:
-                    # Cache the data for 15 minutes
-                    self.cache[cache_key] = data
+            if self._check_rate_limit('yahoo_finance'):
+                yf_data = self._fetch_yfinance_data(pair, period, interval)
+                if yf_data is not None and not yf_data.empty:
+                    self.cache[cache_key] = yf_data
                     self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
-                    return data
-            
-            # Fallback to Alpha Vantage if available (with rate limiting)
-            if self.alpha_vantage_key and self._check_rate_limit():
-                data = self._fetch_alpha_vantage_data(pair, interval)
-                if data is not None and not data.empty:
-                    self.cache[cache_key] = data
-                    self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
-                    return data
+                    return yf_data
             
             logger.warning(f"No real historical data available for {pair}")
             return None

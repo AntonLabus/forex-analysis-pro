@@ -459,15 +459,29 @@ def get_forex_pairs():
                                     if hist_data is not None and len(hist_data) >= 2:
                                         # Get yesterday's close and calculate real change
                                         yesterday_close = float(hist_data.iloc[-2]['Close'])
-                                        today_current = current_price
-                                        daily_change = today_current - yesterday_close
+                                        daily_change = current_price - yesterday_close
                                         daily_change_percent = (daily_change / yesterday_close) * 100
                                         logger.info(f"Real daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
                                     else:
-                                        # No real historical data available; set change to zero
-                                        logger.error(f"No real historical history for {pair}; defaulting daily change to zero")
-                                        daily_change = 0.0
-                                        daily_change_percent = 0.0
+                                        # Attempt Yahoo Finance fallback for forex pairs
+                                        try:
+                                            import yfinance as yf
+                                            yf_sym = data_fetcher.yf_symbols.get(pair)
+                                            if yf_sym:
+                                                tmp = yf.Ticker(yf_sym).history(period='2d', interval='1d')
+                                                if len(tmp) >= 2:
+                                                    yc = float(tmp['Close'].iloc[-2])
+                                                    daily_change = current_price - yc
+                                                    daily_change_percent = (daily_change / yc) * 100
+                                                    logger.info(f"Yahoo fallback daily change for {pair}: {daily_change:.5f} ({daily_change_percent:.2f}%)")
+                                                else:
+                                                    raise Exception("Insufficient Yahoo history")
+                                            else:
+                                                raise Exception("No Yahoo symbol mapping")
+                                        except Exception as yf_err:
+                                            logger.error(f"Fallback Yahoo historical failed for {pair}: {yf_err}")
+                                            daily_change = 0.0
+                                            daily_change_percent = 0.0
                                 except Exception as calc_error:
                                     logger.error(f"Error calculating daily change for {pair}: {calc_error}")
                                     # Minimal fallback
