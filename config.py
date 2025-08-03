@@ -13,7 +13,7 @@ DATABASE_POOL_SIZE = 5
 DATABASE_POOL_TIMEOUT = 30
 
 # API Configuration
-ALPHA_VANTAGE_API_KEY = ''  # Optional: Get from https://www.alphavantage.co/support/#api-key
+ALPHA_VANTAGE_API_KEY = '9OIDA7CDTY0DJ69T'  # Alpha Vantage API key
 NEWS_API_KEY = ''           # Optional: Get from https://newsapi.org/
 ECONOMIC_CALENDAR_API_KEY = ''  # Optional: For economic calendar data
 
