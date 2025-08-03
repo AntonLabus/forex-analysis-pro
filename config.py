@@ -30,7 +30,9 @@ API_RATE_LIMITS = {
     'alpha_vantage': 20,      # Daily limit spread across 24 hours
     'exchangerate_api': 50,   # Conservative for 1500/month limit
     'exchangerate_host': 500, # High tolerance
-    'fawaz_currency': 1000    # GitHub CDN, very high tolerance
+    'fawaz_currency': 1000,    # GitHub CDN, very high tolerance
+    'binance': 100,           # Binance API for crypto prices
+    'coingecko': 50          # CoinGecko API for crypto prices
 }
 
 # Data Source Configuration

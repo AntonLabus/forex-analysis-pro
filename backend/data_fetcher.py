@@ -595,19 +595,31 @@ class DataFetcher:
         current_time = time.time()
         
         if api_name:
-            # MAXIMUM conservative API rate limiting - virtually eliminate API calls
-            api_limits = {
-                'coingecko': {'hourly': 2, 'daily': 10},   # Reduced to bare minimum from 5/25
-                'binance': {'hourly': 5, 'daily': 25},    # Reduced to bare minimum from 15/100
-                'yahoo_finance': {'hourly': 10, 'daily': 50},  # Reduced from 25/250
-                'alpha_vantage': {'hourly': 1, 'daily': 5},    # Reduced to minimum from 2/10
-                'exchangerate_api': {'hourly': 5, 'daily': 25},    # Reduced from 10/50
-                'exchangerate_host': {'hourly': 5, 'daily': 25},   # Reduced from 15/100
-                'fawaz_currency': {'hourly': 10, 'daily': 50}      # Reduced from 20/150
-            }
-            
-            if api_name in api_limits and api_name in self.api_request_counts:
-                limits = api_limits[api_name]
+            # Determine API-specific rate limits from config, fallback to conservative defaults
+            try:
+                import config
+                config_limits = getattr(config, 'API_RATE_LIMITS', {})
+            except ImportError:
+                config_limits = {}
+            if api_name in config_limits:
+                # Use hourly limit from config and global daily limit
+                hourly = config_limits[api_name]
+                daily = getattr(config, 'DAILY_REQUEST_LIMIT', hourly * 24)
+                limits = {'hourly': hourly, 'daily': daily}
+            else:
+                # Fallback to original hardcoded defaults
+                default_api_limits = {
+                    'coingecko': {'hourly': 2, 'daily': 10},
+                    'binance': {'hourly': 5, 'daily': 25},
+                    'yahoo_finance': {'hourly': 10, 'daily': 50},
+                    'alpha_vantage': {'hourly': 1, 'daily': 5},
+                    'exchangerate_api': {'hourly': 5, 'daily': 25},
+                    'exchangerate_host': {'hourly': 5, 'daily': 25},
+                    'fawaz_currency': {'hourly': 10, 'daily': 50}
+                }
+                limits = default_api_limits.get(api_name)
+            # If we have limits and tracking counts, enforce them
+            if limits and api_name in self.api_request_counts:
                 counts = self.api_request_counts[api_name]
                 
                 # Reset counters if more than an hour has passed
