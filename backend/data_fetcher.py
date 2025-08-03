@@ -776,6 +776,21 @@ class DataFetcher:
                 return self.cache[cache_key]
 
         logger.info(f"Fetching real historical data for {pair}")
+        # Crypto: use Alpha Vantage DIGITAL_CURRENCY_DAILY then CoinGecko as fallback
+        if self._is_crypto_pair(pair):
+            logger.info(f"Fetching crypto historical from Alpha Vantage for {pair}")
+            data = self._fetch_alpha_vantage_crypto_historical(pair)
+            if data is not None and not data.empty:
+                self.cache[cache_key] = data
+                self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
+                return data
+            logger.warning(f"Alpha Vantage crypto historical failed for {pair}")
+            logger.info(f"Falling back to CoinGecko historical for {pair}")
+            data = self._fetch_coingecko_historical(pair, period, interval)
+            if data is not None and not data.empty:
+                self.cache[cache_key] = data
+                self.cache_expiry[cache_key] = datetime.now() + timedelta(minutes=15)
+                return data
         
         try:
             # Try Yahoo Finance as fallback (with rate limiting)
