@@ -184,7 +184,31 @@ class SignalManager {
                 `;
             }
             
-            await this.fetchSignals();
+            // Populate pair filter dropdown based on market type
+            const filterSelect = document.getElementById('signal-pair-filter');
+            if (filterSelect) {
+                // reset options
+                filterSelect.innerHTML = '<option value="">All Pairs</option>';
+                const availablePairs = CONFIG.getPairsByMarketType(marketType);
+                availablePairs.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.symbol;
+                    opt.textContent = p.name;
+                    filterSelect.appendChild(opt);
+                });
+                // preserve selection
+                filterSelect.value = this.currentFilterType !== 'all' ? this.currentFilterType : '';
+                filterSelect.onchange = () => {
+                    this.currentFilterType = filterSelect.value || 'all';
+                    this.loadSignals();
+                };
+            }
+            // Fetch signals: single pair if filtered, else batch all
+            if (this.currentFilterType !== 'all') {
+                await this.fetchSignals(this.currentFilterType);
+            } else {
+                await this.fetchAllSignals();
+            }
         } catch (error) {
             console.error('Error loading signals:', error);
             const container = document.getElementById('signals-container');

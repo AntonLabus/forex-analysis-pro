@@ -11,6 +11,8 @@ function setMarketType(type) {
         window.homePage.loadMiniChart();
     }
     if (window.signalManager) {
+        // reset pair filter to show all when market changes
+        window.signalManager.currentFilterType = 'all';
         window.signalManager.loadSignals();
     }
 }
