@@ -2,8 +2,17 @@ let MARKET_TYPE = 'forex';
 
 function setMarketType(type) {
     MARKET_TYPE = type;
-    document.getElementById('forex-btn').classList.toggle('active', type === 'forex');
-    document.getElementById('crypto-btn').classList.toggle('active', type === 'crypto');
+    // Toggle market buttons without relying on classList.toggle force parameter
+    const forexBtn = document.getElementById('forex-btn');
+    const cryptoBtn = document.getElementById('crypto-btn');
+    if (forexBtn) {
+        if (type === 'forex') forexBtn.classList.add('active');
+        else forexBtn.classList.remove('active');
+    }
+    if (cryptoBtn) {
+        if (type === 'crypto') cryptoBtn.classList.add('active');
+        else cryptoBtn.classList.remove('active');
+    }
     // Reload all relevant data/views
     if (window.homePage) {
         window.homePage.loadMarketStats();
